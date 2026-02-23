@@ -1,0 +1,16 @@
+Section,Item,Value
+Selected_Model,Blend_Selected_By_OOF,"Elo:0.530000,SGD:0.470000,LogReg:0.000000,XGB:0.000000,XGB2:0.000000"
+Selected_Model_Metric,OOF_Log_Loss,0.680486496633579
+Selected_Model_Metric,Holdout_Log_Loss,0.669612410102968
+Selected_Model_Metric,Holdout_Accuracy_05,0.5785714285714286
+Selected_Model_Metric,Holdout_AUC_ROC,0.5644664115646258
+Selected_Model_Metric,Holdout_Brier,0.2384199008240212
+Selected_Model_Metric,Overfit_Gap,-0.0108740865306109
+Selected_Model_Metric,Overfit_Status,OK
+Selected_Model_Metric,Permutations_Evaluated,21995
+Leaderboard_Top6,Blend_Selected_By_OOF,"LL=0.669612, Acc=0.5786, AUC=0.5645"
+Leaderboard_Top6,Elo,"LL=0.669759, Acc=0.5821, AUC=0.5597"
+Leaderboard_Top6,SGD,"LL=0.672006, Acc=0.5964, AUC=0.5685"
+Leaderboard_Top6,XGB,"LL=0.673780, Acc=0.5786, AUC=0.5709"
+Leaderboard_Top6,XGB2,"LL=0.676152, Acc=0.6000, AUC=0.5617"
+Leaderboard_Top6,LogReg,"LL=0.686635, Acc=0.6071, AUC=0.5594"

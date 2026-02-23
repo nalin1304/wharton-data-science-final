@@ -1,0 +1,1025 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WHL 2026 Final Report</title>
+  <style>
+    :root {
+      --bg: #0a1220;
+      --bg2: #111b2f;
+      --card: #17243b;
+      --line: #2a3d5f;
+      --txt: #eaf1ff;
+      --muted: #9db1d1;
+      --accent: #29c2a8;
+      --accent2: #f2b44d;
+      --good: #25c17a;
+      --warn: #ffae42;
+      --bad: #ff6b6b;
+      --info: #56a8ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--txt);
+      font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1200px 500px at 20% -20%, rgba(41,194,168,0.18), transparent 60%),
+        radial-gradient(1000px 500px at 110% 0%, rgba(242,180,77,0.16), transparent 60%),
+        var(--bg);
+    }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 22px 40px; }
+    .hero {
+      background: linear-gradient(135deg, var(--bg2), #0f1d33);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+    }
+    .title { margin: 0; font-size: 34px; letter-spacing: 0.2px; }
+    .subtitle { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .pill {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(23,36,59,0.8);
+      font-size: 13px;
+      color: var(--accent2);
+      font-weight: 700;
+    }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; margin-top: 14px; }
+    .card {
+      grid-column: span 12;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 10px; margin-top: 14px; }
+    .kpi-card {
+      background: #121f36;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 88px;
+    }
+    .kpi-title { color: var(--muted); font-size: 12px; }
+    .kpi-val { margin-top: 8px; font-size: 22px; font-weight: 700; color: var(--accent); }
+    .h2 { margin: 0 0 10px; font-size: 20px; color: var(--accent2); }
+    .h3 { margin: 0 0 8px; font-size: 16px; color: var(--txt); }
+    .row2 .card:nth-child(1), .row2 .card:nth-child(2) { grid-column: span 6; }
+    .full { grid-column: span 12; }
+    .viz { width: 100%; border-radius: 10px; border: 1px solid var(--line); display: block; }
+    .report-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .report-table th {
+      position: sticky;
+      top: 0;
+      background: #0f1b31;
+      color: var(--accent2);
+      text-align: left;
+      padding: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .report-table td { padding: 8px; border-bottom: 1px solid rgba(42,61,95,0.5); }
+    .table-wrap { overflow: auto; max-height: 460px; border: 1px solid var(--line); border-radius: 10px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 4px 7px; border-radius: 999px; }
+    .badge.ok { background: rgba(37,193,122,0.16); color: #85f3bd; border: 1px solid rgba(37,193,122,0.4); }
+    .badge.warn { background: rgba(255,174,66,0.16); color: #ffd18a; border: 1px solid rgba(255,174,66,0.4); }
+    .badge.bad { background: rgba(255,107,107,0.16); color: #ffb3b3; border: 1px solid rgba(255,107,107,0.4); }
+    .badge.info { background: rgba(86,168,255,0.16); color: #a9d2ff; border: 1px solid rgba(86,168,255,0.4); }
+    .foot { color: var(--muted); font-size: 12px; margin-top: 16px; }
+    @media (max-width: 980px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .row2 .card:nth-child(1), .row2 .card:nth-child(2) { grid-column: span 12; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1 class="title">WHL 2026 Final Analytics Report</h1>
+      <div class="subtitle">Generated 2026-02-21 15:38 | Competition-aligned, leakage-safe model selection using time-split OOF optimization.</div>
+      <div class="pill">Selected Model: Blend_Selected_By_OOF</div>
+      <div class="subtitle" style="margin-top:8px;">Blend weights: Elo:0.530000,SGD:0.470000,LogReg:0.000000,XGB:0.000000,XGB2:0.000000</div>
+      <div class="kpi-grid"><div class="kpi-card"><div class="kpi-title">OOF Log Loss</div><div class="kpi-val">0.680486</div></div><div class="kpi-card"><div class="kpi-title">Holdout Log Loss</div><div class="kpi-val">0.669612</div></div><div class="kpi-card"><div class="kpi-title">Holdout Accuracy</div><div class="kpi-val">57.86%</div></div><div class="kpi-card"><div class="kpi-title">Holdout AUC</div><div class="kpi-val">0.5645</div></div><div class="kpi-card"><div class="kpi-title">Holdout Brier</div><div class="kpi-val">0.238420</div></div><div class="kpi-card"><div class="kpi-title">Permutations</div><div class="kpi-val">21995</div></div></div>
+      <div class="subtitle" style="margin-top:10px;">Data integrity checks passed: 20/20</div>
+    </section>
+
+    <section class="grid row2">
+      <div class="card">
+        <h2 class="h2">Power Rankings (Top 16)</h2>
+        <div class="table-wrap"><table border="1" class="dataframe report-table" id="power_table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Rank</th>
+      <th>Team</th>
+      <th>Power_Score</th>
+      <th>Wins</th>
+      <th>Elo_Rating</th>
+      <th>EV_xG%</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>brazil</td>
+      <td>0.9363</td>
+      <td>58</td>
+      <td>1574.3</td>
+      <td>0.5941</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>pakistan</td>
+      <td>0.8550</td>
+      <td>49</td>
+      <td>1541.6</td>
+      <td>0.5864</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>thailand</td>
+      <td>0.8053</td>
+      <td>50</td>
+      <td>1552.8</td>
+      <td>0.5944</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>peru</td>
+      <td>0.7406</td>
+      <td>52</td>
+      <td>1542.9</td>
+      <td>0.5253</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>china</td>
+      <td>0.7354</td>
+      <td>47</td>
+      <td>1536.7</td>
+      <td>0.5417</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>netherlands</td>
+      <td>0.6956</td>
+      <td>54</td>
+      <td>1555.9</td>
+      <td>0.5167</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>india</td>
+      <td>0.6464</td>
+      <td>49</td>
+      <td>1523.3</td>
+      <td>0.4974</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>panama</td>
+      <td>0.6245</td>
+      <td>46</td>
+      <td>1510.8</td>
+      <td>0.4957</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>iceland</td>
+      <td>0.6183</td>
+      <td>46</td>
+      <td>1515.5</td>
+      <td>0.4985</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>uk</td>
+      <td>0.6114</td>
+      <td>39</td>
+      <td>1508.8</td>
+      <td>0.5081</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>guatemala</td>
+      <td>0.6063</td>
+      <td>42</td>
+      <td>1509.6</td>
+      <td>0.5389</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>serbia</td>
+      <td>0.5877</td>
+      <td>41</td>
+      <td>1511.1</td>
+      <td>0.5121</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>mexico</td>
+      <td>0.5836</td>
+      <td>38</td>
+      <td>1502.1</td>
+      <td>0.5660</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>new_zealand</td>
+      <td>0.5583</td>
+      <td>40</td>
+      <td>1505.5</td>
+      <td>0.5055</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>ethiopia</td>
+      <td>0.5368</td>
+      <td>43</td>
+      <td>1500.5</td>
+      <td>0.4866</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>south_korea</td>
+      <td>0.5224</td>
+      <td>39</td>
+      <td>1497.8</td>
+      <td>0.5498</td>
+    </tr>
+  </tbody>
+</table></div>
+      </div>
+      <div class="card">
+        <h2 class="h2">Line Disparity Rankings (Top 16)</h2>
+        <div class="table-wrap"><table border="1" class="dataframe report-table" id="disp_table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Rank</th>
+      <th>Team</th>
+      <th>Disparity_Ratio</th>
+      <th>Wins</th>
+      <th>Power_Rank</th>
+      <th>Elo_Rank</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>guatemala</td>
+      <td>1.3616</td>
+      <td>42</td>
+      <td>11</td>
+      <td>11</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>usa</td>
+      <td>1.3595</td>
+      <td>35</td>
+      <td>25</td>
+      <td>29</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>saudi_arabia</td>
+      <td>1.3560</td>
+      <td>39</td>
+      <td>22</td>
+      <td>21</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>uae</td>
+      <td>1.3504</td>
+      <td>38</td>
+      <td>30</td>
+      <td>25</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>france</td>
+      <td>1.3422</td>
+      <td>37</td>
+      <td>26</td>
+      <td>19</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>iceland</td>
+      <td>1.3165</td>
+      <td>46</td>
+      <td>9</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>singapore</td>
+      <td>1.2543</td>
+      <td>40</td>
+      <td>17</td>
+      <td>23</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>new_zealand</td>
+      <td>1.2321</td>
+      <td>40</td>
+      <td>14</td>
+      <td>13</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>peru</td>
+      <td>1.2019</td>
+      <td>52</td>
+      <td>4</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>panama</td>
+      <td>1.1995</td>
+      <td>46</td>
+      <td>8</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>rwanda</td>
+      <td>1.1922</td>
+      <td>30</td>
+      <td>24</td>
+      <td>31</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>uk</td>
+      <td>1.1699</td>
+      <td>39</td>
+      <td>10</td>
+      <td>12</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>india</td>
+      <td>1.1674</td>
+      <td>49</td>
+      <td>7</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>serbia</td>
+      <td>1.1204</td>
+      <td>41</td>
+      <td>12</td>
+      <td>9</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>south_korea</td>
+      <td>1.1078</td>
+      <td>39</td>
+      <td>16</td>
+      <td>17</td>
+    </tr>
+    <tr>
+      <td>16</td>
+      <td>netherlands</td>
+      <td>1.1034</td>
+      <td>54</td>
+      <td>6</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+</table></div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card full">
+        <h2 class="h2">Tournament Predictions (Final Selected Model)</h2>
+        <div class="table-wrap"><table border="1" class="dataframe report-table" id="pred_table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Game</th>
+      <th>Home_Team</th>
+      <th>Away_Team</th>
+      <th>Win_Prob</th>
+      <th>Predicted_Winner</th>
+      <th>Confidence</th>
+      <th>Robust_Win_Prob</th>
+      <th>Robust_CI_Low_95</th>
+      <th>Robust_CI_High_95</th>
+      <th>Fragility_Index</th>
+      <th>Edge_Stability</th>
+      <th>Top_Edge_Driver</th>
+      <th>Top_Edge_Contribution</th>
+      <th>Model_Rationale</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>netherlands vs mongolia</td>
+      <td>netherlands</td>
+      <td>mongolia</td>
+      <td>0.6727</td>
+      <td>netherlands</td>
+      <td>0.6727</td>
+      <td>0.7410</td>
+      <td>0.6591</td>
+      <td>0.8150</td>
+      <td>0.0000</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.1285</td>
+      <td>netherlands favored; strongest signal is Elo (home-leaning) with edge contribution +0.128.</td>
+    </tr>
+    <tr>
+      <td>brazil vs kazakhstan</td>
+      <td>brazil</td>
+      <td>kazakhstan</td>
+      <td>0.6717</td>
+      <td>brazil</td>
+      <td>0.6717</td>
+      <td>0.7346</td>
+      <td>0.6463</td>
+      <td>0.8081</td>
+      <td>0.0000</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.1266</td>
+      <td>brazil favored; strongest signal is Elo (home-leaning) with edge contribution +0.127.</td>
+    </tr>
+    <tr>
+      <td>peru vs rwanda</td>
+      <td>peru</td>
+      <td>rwanda</td>
+      <td>0.6288</td>
+      <td>peru</td>
+      <td>0.6288</td>
+      <td>0.7059</td>
+      <td>0.6188</td>
+      <td>0.7816</td>
+      <td>0.0000</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.1097</td>
+      <td>peru favored; strongest signal is Elo (home-leaning) with edge contribution +0.110.</td>
+    </tr>
+    <tr>
+      <td>thailand vs oman</td>
+      <td>thailand</td>
+      <td>oman</td>
+      <td>0.6223</td>
+      <td>thailand</td>
+      <td>0.6223</td>
+      <td>0.6898</td>
+      <td>0.6265</td>
+      <td>0.7494</td>
+      <td>0.0000</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.1013</td>
+      <td>thailand favored; strongest signal is Elo (home-leaning) with edge contribution +0.101.</td>
+    </tr>
+    <tr>
+      <td>pakistan vs germany</td>
+      <td>pakistan</td>
+      <td>germany</td>
+      <td>0.6111</td>
+      <td>pakistan</td>
+      <td>0.6111</td>
+      <td>0.6693</td>
+      <td>0.5929</td>
+      <td>0.7411</td>
+      <td>0.0000</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.0906</td>
+      <td>pakistan favored; strongest signal is Elo (home-leaning) with edge contribution +0.091.</td>
+    </tr>
+    <tr>
+      <td>china vs france</td>
+      <td>china</td>
+      <td>france</td>
+      <td>0.6084</td>
+      <td>china</td>
+      <td>0.6084</td>
+      <td>0.6471</td>
+      <td>0.5413</td>
+      <td>0.7401</td>
+      <td>0.0015</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.0772</td>
+      <td>china favored; strongest signal is Elo (home-leaning) with edge contribution +0.077.</td>
+    </tr>
+    <tr>
+      <td>india vs usa</td>
+      <td>india</td>
+      <td>usa</td>
+      <td>0.6014</td>
+      <td>india</td>
+      <td>0.6014</td>
+      <td>0.6617</td>
+      <td>0.5687</td>
+      <td>0.7517</td>
+      <td>0.0000</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.0871</td>
+      <td>india favored; strongest signal is Elo (home-leaning) with edge contribution +0.087.</td>
+    </tr>
+    <tr>
+      <td>panama vs switzerland</td>
+      <td>panama</td>
+      <td>switzerland</td>
+      <td>0.5878</td>
+      <td>panama</td>
+      <td>0.5878</td>
+      <td>0.6358</td>
+      <td>0.5418</td>
+      <td>0.7251</td>
+      <td>0.0035</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.0727</td>
+      <td>panama favored; strongest signal is Elo (home-leaning) with edge contribution +0.073.</td>
+    </tr>
+    <tr>
+      <td>iceland vs canada</td>
+      <td>iceland</td>
+      <td>canada</td>
+      <td>0.5810</td>
+      <td>iceland</td>
+      <td>0.5810</td>
+      <td>0.6248</td>
+      <td>0.5331</td>
+      <td>0.7111</td>
+      <td>0.0030</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.0668</td>
+      <td>iceland favored; strongest signal is Elo (home-leaning) with edge contribution +0.067.</td>
+    </tr>
+    <tr>
+      <td>ethiopia vs saudi_arabia</td>
+      <td>ethiopia</td>
+      <td>saudi_arabia</td>
+      <td>0.5652</td>
+      <td>ethiopia</td>
+      <td>0.5652</td>
+      <td>0.6030</td>
+      <td>0.5119</td>
+      <td>0.6870</td>
+      <td>0.0130</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.0551</td>
+      <td>ethiopia favored; strongest signal is Elo (home-leaning) with edge contribution +0.055.</td>
+    </tr>
+    <tr>
+      <td>philippines vs morocco</td>
+      <td>philippines</td>
+      <td>morocco</td>
+      <td>0.5648</td>
+      <td>philippines</td>
+      <td>0.5648</td>
+      <td>0.6009</td>
+      <td>0.4915</td>
+      <td>0.7022</td>
+      <td>0.0340</td>
+      <td>Medium</td>
+      <td>Elo</td>
+      <td>0.0523</td>
+      <td>philippines favored; strongest signal is Elo (home-leaning) with edge contribution +0.052.</td>
+    </tr>
+    <tr>
+      <td>uk vs mexico</td>
+      <td>uk</td>
+      <td>mexico</td>
+      <td>0.5632</td>
+      <td>uk</td>
+      <td>0.5632</td>
+      <td>0.5955</td>
+      <td>0.4938</td>
+      <td>0.6968</td>
+      <td>0.0310</td>
+      <td>Medium</td>
+      <td>Elo</td>
+      <td>0.0502</td>
+      <td>uk favored; strongest signal is Elo (home-leaning) with edge contribution +0.050.</td>
+    </tr>
+    <tr>
+      <td>indonesia vs uae</td>
+      <td>indonesia</td>
+      <td>uae</td>
+      <td>0.5619</td>
+      <td>indonesia</td>
+      <td>0.5619</td>
+      <td>0.6045</td>
+      <td>0.5085</td>
+      <td>0.6947</td>
+      <td>0.0190</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.0555</td>
+      <td>indonesia favored; strongest signal is Elo (home-leaning) with edge contribution +0.056.</td>
+    </tr>
+    <tr>
+      <td>guatemala vs south_korea</td>
+      <td>guatemala</td>
+      <td>south_korea</td>
+      <td>0.5583</td>
+      <td>guatemala</td>
+      <td>0.5583</td>
+      <td>0.6023</td>
+      <td>0.5121</td>
+      <td>0.6880</td>
+      <td>0.0120</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.0540</td>
+      <td>guatemala favored; strongest signal is Elo (home-leaning) with edge contribution +0.054.</td>
+    </tr>
+    <tr>
+      <td>singapore vs new_zealand</td>
+      <td>singapore</td>
+      <td>new_zealand</td>
+      <td>0.5304</td>
+      <td>singapore</td>
+      <td>0.5304</td>
+      <td>0.5540</td>
+      <td>0.4569</td>
+      <td>0.6489</td>
+      <td>0.1325</td>
+      <td>Medium</td>
+      <td>Elo</td>
+      <td>0.0279</td>
+      <td>singapore favored; strongest signal is Elo (home-leaning) with edge contribution +0.028.</td>
+    </tr>
+    <tr>
+      <td>vietnam vs serbia</td>
+      <td>vietnam</td>
+      <td>serbia</td>
+      <td>0.5141</td>
+      <td>vietnam</td>
+      <td>0.5141</td>
+      <td>0.5393</td>
+      <td>0.4730</td>
+      <td>0.6062</td>
+      <td>0.1275</td>
+      <td>Medium</td>
+      <td>Elo</td>
+      <td>0.0214</td>
+      <td>vietnam favored; strongest signal is Elo (home-leaning) with edge contribution +0.021.</td>
+    </tr>
+  </tbody>
+</table></div>
+      </div>
+      <div class="card">
+        <h2 class="h2">How The Model Thinks</h2>
+        <div class="subtitle">Final Model Interpretability Notes<br/>Blend Structure<br/>Selected blend uses a weighted average of model probabilities.<br/>- Elo: 0.530, - SGD: 0.470, - LogReg: 0.000, - XGB: 0.000, - XGB2: 0.000<br/>Strongest Signals Supporting Home Teams<br/>- PDO (shooting + save luck proxy) (std coef 0.314)<br/>- rolling xGF (20 games) (std coef 0.252)<br/>- win percentage (std coef 0.199)<br/>- even-strength xG share (std coef 0.079)<br/>- pythagorean win expectation (std coef 0.058)<br/>Strongest Signals Supporting Away Teams<br/>- close-game win percentage (std coef -0.229)</div>
+        <h3 class="h3" style="margin-top:12px;">Blend Component Weights</h3>
+        <div class="table-wrap"><table border="1" class="dataframe report-table" id="weight_table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Component</th>
+      <th>Weight</th>
+      <th>Interpretation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Elo</td>
+      <td>0.5300</td>
+      <td>Higher weight means stronger influence in the final blend.</td>
+    </tr>
+    <tr>
+      <td>SGD</td>
+      <td>0.4700</td>
+      <td>Higher weight means stronger influence in the final blend.</td>
+    </tr>
+    <tr>
+      <td>LogReg</td>
+      <td>0.0000</td>
+      <td>Higher weight means stronger influence in the final blend.</td>
+    </tr>
+    <tr>
+      <td>XGB</td>
+      <td>0.0000</td>
+      <td>Higher weight means stronger influence in the final blend.</td>
+    </tr>
+    <tr>
+      <td>XGB2</td>
+      <td>0.0000</td>
+      <td>Higher weight means stronger influence in the final blend.</td>
+    </tr>
+  </tbody>
+</table></div>
+      </div>
+      <div class="card">
+        <h2 class="h2">Top Feature Drivers (Surrogate)</h2>
+        <div class="subtitle">Direction is from the home-team perspective.</div>
+        <div class="table-wrap"><table border="1" class="dataframe report-table" id="interp_table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Rank</th>
+      <th>Feature_Name</th>
+      <th>Std_Coef</th>
+      <th>Direction</th>
+      <th>Plain_English</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td>PDO (shooting + save luck proxy)</td>
+      <td>0.3135</td>
+      <td>supports home team</td>
+      <td>When the home team is stronger on PDO (shooting + save luck proxy), the model generally increases home win probability.</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>rolling xGF (20 games)</td>
+      <td>0.2515</td>
+      <td>supports home team</td>
+      <td>When the home team is stronger on rolling xGF (20 games), the model generally increases home win probability.</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>close-game win percentage</td>
+      <td>-0.2289</td>
+      <td>supports away team</td>
+      <td>When the home team is stronger on close-game win percentage, the model generally decreases home win probability.</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>win percentage</td>
+      <td>0.1994</td>
+      <td>supports home team</td>
+      <td>When the home team is stronger on win percentage, the model generally increases home win probability.</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>rolling xGA (20 games)</td>
+      <td>-0.1888</td>
+      <td>supports away team</td>
+      <td>When the home team is stronger on rolling xGA (20 games), the model generally decreases home win probability.</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>pregame Elo rating</td>
+      <td>-0.1772</td>
+      <td>supports away team</td>
+      <td>When the home team is stronger on pregame Elo rating, the model generally decreases home win probability.</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>shelter index</td>
+      <td>-0.1210</td>
+      <td>supports away team</td>
+      <td>When the home team is stronger on shelter index, the model generally decreases home win probability.</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>recent form (last 5 games)</td>
+      <td>-0.1157</td>
+      <td>supports away team</td>
+      <td>When the home team is stronger on recent form (last 5 games), the model generally decreases home win probability.</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>rest proxy</td>
+      <td>-0.0807</td>
+      <td>supports away team</td>
+      <td>When the home team is stronger on rest proxy, the model generally decreases home win probability.</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>even-strength xG share</td>
+      <td>0.0786</td>
+      <td>supports home team</td>
+      <td>When the home team is stronger on even-strength xG share, the model generally increases home win probability.</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>power-play xG per 60</td>
+      <td>-0.0729</td>
+      <td>supports away team</td>
+      <td>When the home team is stronger on power-play xG per 60, the model generally decreases home win probability.</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>penalty-kill xGA per 60</td>
+      <td>-0.0593</td>
+      <td>supports away team</td>
+      <td>When the home team is stronger on penalty-kill xGA per 60, the model generally decreases home win probability.</td>
+    </tr>
+  </tbody>
+</table></div>
+      </div>
+      <div class="card full">
+        <h2 class="h2">Final Visualization Pack</h2>
+        <img class="viz" src="Final_Visualizations.png" alt="Final visualizations" />
+      </div>
+      <div class="card">
+        <h2 class="h2">Data Integrity Summary</h2>
+        <div class="table-wrap"><table border="1" class="dataframe report-table" id="integrity_table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Check</th>
+      <th>Value</th>
+      <th>Status</th>
+      <th>Details</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>raw_vs_main_rows</td>
+      <td>raw=25827, main_nonblank=25827, main_blank=0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>MainSheet blank rows are excluded via dropna(how='all').</td>
+    </tr>
+    <tr>
+      <td>main_keys_not_in_raw</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>nonempty_extra_rows=0</td>
+    </tr>
+    <tr>
+      <td>season_shape</td>
+      <td>teams=32, games=1312</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Workbook reference is 32 teams and 1,312 games.</td>
+    </tr>
+    <tr>
+      <td>corrupted_csv_placeholders</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>raw_main_parity_toi</td>
+      <td>max_abs_diff=0; neq_rows=0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Compared by record_id.</td>
+    </tr>
+    <tr>
+      <td>raw_main_parity_home_shots</td>
+      <td>max_abs_diff=0; neq_rows=0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Compared by record_id.</td>
+    </tr>
+    <tr>
+      <td>raw_main_parity_away_shots</td>
+      <td>max_abs_diff=0; neq_rows=0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Compared by record_id.</td>
+    </tr>
+    <tr>
+      <td>raw_main_parity_home_xg</td>
+      <td>max_abs_diff=0; neq_rows=0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Compared by record_id.</td>
+    </tr>
+    <tr>
+      <td>raw_main_parity_away_xg</td>
+      <td>max_abs_diff=0; neq_rows=0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Compared by record_id.</td>
+    </tr>
+    <tr>
+      <td>raw_main_parity_home_goals</td>
+      <td>max_abs_diff=0; neq_rows=0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Compared by record_id.</td>
+    </tr>
+    <tr>
+      <td>raw_main_parity_away_goals</td>
+      <td>max_abs_diff=0; neq_rows=0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Compared by record_id.</td>
+    </tr>
+    <tr>
+      <td>raw_required_columns</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>main_required_columns</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>pp_required_columns</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>unit_required_columns</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>rest_required_columns</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>tev_required_columns</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>training_diff_columns_present</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>none</td>
+    </tr>
+    <tr>
+      <td>training_numeric_matrix_valid</td>
+      <td>0</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Matrix converted with nan_to_num before modeling.</td>
+    </tr>
+    <tr>
+      <td>data_integrity_summary</td>
+      <td>core parity ok</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Core shift metrics in MainSheet match raw by record_id.</td>
+    </tr>
+  </tbody>
+</table></div>
+      </div>
+      <div class="card">
+        <h2 class="h2">Leakage & Overfitting Summary</h2>
+        <div class="table-wrap"><table border="1" class="dataframe report-table" id="leak_table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>Check</th>
+      <th>Value</th>
+      <th>Status</th>
+      <th>Details</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>train_test_game_id_overlap</td>
+      <td>0.000000</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Expected 0 overlap between train and holdout game ids</td>
+    </tr>
+    <tr>
+      <td>time_split_logreg_holdout</td>
+      <td>0.686635</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>AUC=0.5594</td>
+    </tr>
+    <tr>
+      <td>permuted_label_sanity</td>
+      <td>0.748071</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>AUC=0.4568 (should be near random)</td>
+    </tr>
+    <tr>
+      <td>random_split_vs_time_split_ll_gap</td>
+      <td>0.008295</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Positive means random split is easier than temporal split</td>
+    </tr>
+    <tr>
+      <td>max_feature_target_corr_abs</td>
+      <td>0.138303</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Feature=pdo_d</td>
+    </tr>
+    <tr>
+      <td>selected_blend_overfit_gap</td>
+      <td>-0.010874</td>
+      <td><span class="badge ok">OK</span></td>
+      <td>holdout_ll - oof_ll for selected blend</td>
+    </tr>
+  </tbody>
+</table></div>
+      </div>
+    </section>
+
+    <div class="foot">
+      Source files: Final_* CSV outputs, model selection policy, and final prediction artifacts in this workspace.
+    </div>
+  </div>
+</body>
+</html>

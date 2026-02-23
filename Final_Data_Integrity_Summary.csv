@@ -1,0 +1,21 @@
+Check,Value,Status,Details
+raw_vs_main_rows,"raw=25827, main_nonblank=25827, main_blank=0",PASS,MainSheet blank rows are excluded via dropna(how='all').
+main_keys_not_in_raw,0,PASS,nonempty_extra_rows=0
+season_shape,"teams=32, games=1312",PASS,"Workbook reference is 32 teams and 1,312 games."
+corrupted_csv_placeholders,0,PASS,none
+raw_main_parity_toi,max_abs_diff=0; neq_rows=0,PASS,Compared by record_id.
+raw_main_parity_home_shots,max_abs_diff=0; neq_rows=0,PASS,Compared by record_id.
+raw_main_parity_away_shots,max_abs_diff=0; neq_rows=0,PASS,Compared by record_id.
+raw_main_parity_home_xg,max_abs_diff=0; neq_rows=0,PASS,Compared by record_id.
+raw_main_parity_away_xg,max_abs_diff=0; neq_rows=0,PASS,Compared by record_id.
+raw_main_parity_home_goals,max_abs_diff=0; neq_rows=0,PASS,Compared by record_id.
+raw_main_parity_away_goals,max_abs_diff=0; neq_rows=0,PASS,Compared by record_id.
+raw_required_columns,0,PASS,none
+main_required_columns,0,PASS,none
+pp_required_columns,0,PASS,none
+unit_required_columns,0,PASS,none
+rest_required_columns,0,PASS,none
+tev_required_columns,0,PASS,none
+training_diff_columns_present,0,PASS,none
+training_numeric_matrix_valid,0,PASS,Matrix converted with nan_to_num before modeling.
+data_integrity_summary,core parity ok,PASS,Core shift metrics in MainSheet match raw by record_id.

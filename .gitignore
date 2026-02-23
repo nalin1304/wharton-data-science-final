@@ -1,0 +1,22 @@
+# OS / Python
+.DS_Store
+__pycache__/
+*.pyc
+
+# Large raw inputs (kept local)
+MainSheet.csv
+whl_2025.csv
+PP_consistency.csv
+Game_Rest.csv
+TOI flag.csv
+empty_net flag.csv
+Team_ev_strength.csv
+Unit_specific.csv
+WHSDSC 2026 Workbook - Hockey.pdf
+WHSDSC_Rnd1_matchups.xlsx
+Instructions.txt
+
+# Intermediate/legacy artifacts (keep final-only repo)
+ELO_*
+Permutation_*
+agents.md

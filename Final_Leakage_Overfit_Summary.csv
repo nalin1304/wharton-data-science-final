@@ -1,0 +1,7 @@
+Check,Value,Status,Details
+train_test_game_id_overlap,0.0,PASS,Expected 0 overlap between train and holdout game ids
+time_split_logreg_holdout,0.686635,INFO,AUC=0.5594
+permuted_label_sanity,0.748071,PASS,AUC=0.4568 (should be near random)
+random_split_vs_time_split_ll_gap,0.008295,INFO,Positive means random split is easier than temporal split
+max_feature_target_corr_abs,0.138303,PASS,Feature=pdo_d
+selected_blend_overfit_gap,-0.010874,OK,holdout_ll - oof_ll for selected blend
