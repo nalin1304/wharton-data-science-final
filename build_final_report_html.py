@@ -60,8 +60,9 @@ def main() -> None:
     integrity = read_csv("Final_Data_Integrity_Summary.csv")
     leak = read_csv("Final_Leakage_Overfit_Summary.csv")
     interp = read_csv_optional("Final_Model_Interpretability_Top12.csv")
+    interp_summary = read_csv_optional("Final_Model_Interpretability_Summary.csv")
     weight_explain = read_csv_optional("Final_Model_Weight_Explain.csv")
-    interp_notes = read_text_optional("Final_Model_Interpretability_Notes.md")
+    interp_notes = read_text_optional("Final_Model_Interpretability_Human_Readout.md")
 
     selected_row = model[model["Section"] == "Selected_Model"].iloc[0]
     metrics = model[model["Section"] == "Selected_Model_Metric"].set_index("Item")["Value"].to_dict()
@@ -120,10 +121,35 @@ def main() -> None:
     else:
         human_notes = "The model blends Elo and SGD probabilities. Elo captures long-run team strength; SGD captures feature-driven matchup context."
 
+    summary_note = ""
+    if interp_summary is not None and len(interp_summary):
+        sm = {str(k): v for k, v in zip(interp_summary["Metric"], interp_summary["Value"])}
+        top_feat = str(sm.get("Top_Feature", "")).strip()
+        top_pct = fmt_float(sm.get("Top_Feature_Importance_Pct", ""), 1)
+        high_stability = sm.get("High_Stability_Features", "")
+        if top_feat:
+            summary_note = (
+                f"Top global driver: {top_feat} ({top_pct}% importance). "
+                f"High-stability features: {high_stability}."
+            )
+
     interp_tbl_html = ""
     if interp is not None and len(interp):
-        interp_view = interp[["Rank", "Feature_Name", "Std_Coef", "Direction", "Plain_English"]].copy()
-        interp_view["Std_Coef"] = interp_view["Std_Coef"].map(lambda x: fmt_float(x, 4))
+        preferred_cols = [
+            "Rank",
+            "Feature_Name",
+            "Std_Coef",
+            "Importance_Pct",
+            "Stability",
+            "Direction",
+            "Plain_English",
+        ]
+        present_cols = [c for c in preferred_cols if c in interp.columns]
+        interp_view = interp[present_cols].copy()
+        if "Std_Coef" in interp_view.columns:
+            interp_view["Std_Coef"] = interp_view["Std_Coef"].map(lambda x: fmt_float(x, 4))
+        if "Importance_Pct" in interp_view.columns:
+            interp_view["Importance_Pct"] = interp_view["Importance_Pct"].map(lambda x: fmt_float(x, 1))
         interp_tbl_html = f'<div class="table-wrap">{render_table(interp_view, "interp_table")}</div>'
     else:
         interp_tbl_html = '<div class="subtitle">Interpretability table not found.</div>'
@@ -271,7 +297,7 @@ def main() -> None:
       </div>
       <div class="card">
         <h2 class="h2">Top Feature Drivers (Surrogate)</h2>
-        <div class="subtitle">Direction is from the home-team perspective.</div>
+        <div class="subtitle">Direction is from the home-team perspective. {summary_note}</div>
         {interp_tbl_html}
       </div>
       <div class="card full">

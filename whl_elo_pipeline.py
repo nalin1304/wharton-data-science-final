@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-WHL 2026 - Elo-Only Pipeline
+Elo-focused pipeline for WHL Phase 1.
 
-Purpose:
-- Run a dedicated Elo-only workflow (no multi-model selection).
-- Tune Elo on train-CV only.
-- Produce team Elo ratings, xG metrics, power scores, and Elo-based predictions.
+Runs Elo tuning, evaluates Elo and blend variants, and exports Elo-centric
+rankings, matchup probabilities, and diagnostic reports.
 """
 
 import os
@@ -45,28 +43,7 @@ import whl_analysis as wa
 BASE = os.path.dirname(os.path.abspath(__file__))
 OUT = BASE
 
-MODEL_FEATURES = [
-    "xG_diff",
-    "ev_pct",
-    "xGF60",
-    "xGA60",
-    "wp",
-    "pyth",
-    "disp",
-    "pp60",
-    "pk60",
-    "pdo",
-    "close_wp",
-    "corsi60",
-    "shelter",
-    "elo",
-    "roll_xGF",
-    "roll_xGA",
-    "roll_win",
-    "sos",
-    "form_5",
-    "rest",
-]
+MODEL_FEATURES = wa.MODEL_FEATURES
 
 BLEND_WEIGHT_GRID = np.linspace(0.00, 1.00, 1001)
 THREE_WAY_ELO_GRID = np.linspace(0.60, 1.00, 201)
@@ -189,6 +166,26 @@ def fit_logreg_blend_components(train_df, diff_cols, split):
     mdl_full.fit(xtr_s, ytr)
     pte_lr = wa.model_probs(mdl_full, xte_s)
     return oof, pte_lr, mdl_full, sc_full
+
+
+def fit_full_blend_models(train_df, diff_cols):
+    """
+    Refit blend component models on all leakage-safe season games for final inference.
+    Evaluation and weight tuning remain train/OOF-only.
+    """
+    x = np.nan_to_num(train_df[diff_cols].values, nan=0.0, posinf=0.0, neginf=0.0)
+    y = train_df["home_win"].values.astype(int)
+
+    sc = StandardScaler()
+    x_s = sc.fit_transform(x)
+
+    sgd_base = SGDClassifier(loss="modified_huber", alpha=0.005, max_iter=2500, random_state=wa.RANDOM_STATE)
+    sgd_full = CalibratedClassifierCV(sgd_base, cv=5)
+    sgd_full.fit(x_s, y)
+
+    lr_full = LogisticRegression(max_iter=5000, C=0.30)
+    lr_full.fit(x_s, y)
+    return sgd_full, lr_full, sc
 
 
 def tune_blend_weight_for_ll(ytr, p_elo_tr, p_sgd_oof):
@@ -554,12 +551,16 @@ def build_elo_completeness_report():
         "ELO_Archetypes.csv",
         "ELO_Archetype_Centers.csv",
         "ELO_Tournament_Uncertainty.csv",
+        "ELO_Tournament_Calibration_Selection.csv",
         "ELO_Tournament_Predictions.csv",
         "ELO_Tournament_Uncertainty_LLBlend.csv",
+        "ELO_Tournament_Calibration_Selection_LLBlend.csv",
         "ELO_Tournament_Predictions_LLBlend.csv",
         "ELO_Tournament_Uncertainty_AccBlend.csv",
+        "ELO_Tournament_Calibration_Selection_AccBlend.csv",
         "ELO_Tournament_Predictions_AccBlend.csv",
         "ELO_Tournament_Uncertainty_3WayBlend.csv",
+        "ELO_Tournament_Calibration_Selection_3WayBlend.csv",
         "ELO_Tournament_Predictions_3WayBlend.csv",
         "ELO_All_Pair_Matchups.csv",
         "ELO_All_Pair_Matchups_LLBlend.csv",
@@ -749,8 +750,9 @@ def main():
     selection_policy.insert(0, "Selection_Policy", "best_train_ll_no_holdout_tuning")
     selection_policy.to_csv(os.path.join(OUT, "ELO_Model_Selection_Policy.csv"), index=False)
 
-    sanity_df = wa.run_leakage_and_overfit_checks(train_df, diff_cols, split)
+    sanity_df = wa.run_leakage_and_overfit_checks(train_df, diff_cols, split, raw_df=raw)
     sanity_df.to_csv(os.path.join(OUT, "ELO_Leakage_Sanity_Report.csv"), index=False)
+    sgd_model_full, lr_model_full, blend_scaler_full = fit_full_blend_models(train_df, diff_cols)
     print(
         f"  Elo holdout: LL={metrics['Log_Loss']:.4f} Acc={metrics['Accuracy']:.1%} "
         f"AUC={metrics['AUC_ROC']:.4f} Status={metrics['Status']}"
@@ -760,6 +762,7 @@ def main():
         f"| Blend(Acc): w_elo={w_lr:.3f} Acc={row_lr['Accuracy']:.1%} "
         f"| 3Way: w=[{w3_elo:.3f},{w3_sgd:.3f},{w3_lr:.3f}] LL={row_3way['Log_Loss']:.4f}"
     )
+    print("  Refit SGD/LogReg on full leakage-safe season data for tournament inference.")
 
     print("\n[6/9] Team Elo + xG + power outputs...")
     final_df = wa.build_final_team_features(panel, final_elos, gt, goalie_map, pp_stats, unit_stats, tev)
@@ -792,9 +795,9 @@ def main():
     base_tpred = wa.attach_archetypes_to_matchups(base_tpred, archetypes_df, final_df)
     base_tpred["Win_Prob_Elo"] = base_tpred["Win_Prob"]
 
-    sgd_probs = predict_sgd_matchups(matchups, final_df, MODEL_FEATURES, sgd_scaler, sgd_model)
+    sgd_probs = predict_sgd_matchups(matchups, final_df, MODEL_FEATURES, blend_scaler_full, sgd_model_full)
     base_tpred["Win_Prob_SGD"] = np.round(sgd_probs, 6)
-    lr_probs = predict_logreg_matchups(matchups, final_df, MODEL_FEATURES, lr_scaler, lr_model)
+    lr_probs = predict_logreg_matchups(matchups, final_df, MODEL_FEATURES, blend_scaler_full, lr_model_full)
     base_tpred["Win_Prob_LogReg"] = np.round(lr_probs, 6)
     base_tpred["Win_Prob_LLBlend"] = np.round(
         np.clip(w_ll * base_tpred["Win_Prob_Elo"].values + (1 - w_ll) * base_tpred["Win_Prob_SGD"].values, 1e-7, 1 - 1e-7),
@@ -827,9 +830,11 @@ def main():
         t["Win_Prob"] = np.clip(t[prob_col].values.astype(float), 1e-7, 1 - 1e-7)
         t["Predicted_Winner"] = np.where(t["Win_Prob"] >= thr, t["Home_Team"], t["Away_Team"])
         t["Confidence"] = np.round(np.maximum(t["Win_Prob"], 1 - t["Win_Prob"]), 4)
-        ctab = wa.build_calibration_table(cal_probs, yte, bins=10, min_bin=20)
+        ctab, csel, cal_fn, cal_method = wa.build_calibration_artifacts(cal_probs, yte, bins=10, min_bin=20)
         ctab.to_csv(os.path.join(OUT, cal_name), index=False)
-        t = wa.attach_uncertainty_to_matchups(t, ctab)
+        csel.to_csv(os.path.join(OUT, cal_name.replace("Uncertainty", "Calibration_Selection")), index=False)
+        t = wa.attach_uncertainty_to_matchups(t, ctab, calibrate_fn=cal_fn)
+        t["Calibration_Method"] = cal_method
         t["Consensus_Win_Prob"] = t["Win_Prob"]
         t["Model_Spread"] = np.abs(t["Win_Prob_Elo"] - t["Win_Prob_SGD"])
         t = wa.attach_robustness_layer(t, final_df)
@@ -897,21 +902,21 @@ def main():
     all_pairs = predict_all_pairs_elo(teams, final_elos, elo_best["ha"])
     all_pairs.to_csv(os.path.join(OUT, "ELO_All_Pair_Matchups.csv"), index=False)
     all_pairs_ll = predict_all_pairs_blend(
-        teams, final_df, MODEL_FEATURES, sgd_scaler, sgd_model, final_elos, elo_best["ha"], w_ll
+        teams, final_df, MODEL_FEATURES, blend_scaler_full, sgd_model_full, final_elos, elo_best["ha"], w_ll
     )
     all_pairs_ll.to_csv(os.path.join(OUT, "ELO_All_Pair_Matchups_LLBlend.csv"), index=False)
     all_pairs_acc = predict_all_pairs_blend(
-        teams, final_df, MODEL_FEATURES, lr_scaler, lr_model, final_elos, elo_best["ha"], w_lr
+        teams, final_df, MODEL_FEATURES, blend_scaler_full, lr_model_full, final_elos, elo_best["ha"], w_lr
     )
     all_pairs_acc.to_csv(os.path.join(OUT, "ELO_All_Pair_Matchups_AccBlend.csv"), index=False)
     all_pairs_3way = predict_all_pairs_three_way_blend(
         teams,
         final_df,
         MODEL_FEATURES,
-        sgd_scaler,
-        sgd_model,
-        lr_scaler,
-        lr_model,
+        blend_scaler_full,
+        sgd_model_full,
+        blend_scaler_full,
+        lr_model_full,
         final_elos,
         elo_best["ha"],
         w3_elo,

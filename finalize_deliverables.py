@@ -39,6 +39,7 @@ def build_final_outputs():
     leak = _must_read("Permutation_Leakage_Overfit_Report.csv")
     interp = _optional_read("Permutation_Model_Interpretability.csv")
     interp_top = _optional_read("Permutation_Model_Interpretability_Top12.csv")
+    interp_summary = _optional_read("Permutation_Model_Interpretability_Summary.csv")
     weight_explain = _optional_read("Permutation_Model_Weight_Explain.csv")
 
     # Final power rankings
@@ -60,7 +61,14 @@ def build_final_outputs():
         "Fragility_Index",
         "Edge_Stability",
     ]
-    for c in ["Top_Edge_Driver", "Top_Edge_Contribution", "Model_Rationale"]:
+    for c in [
+        "Top_Edge_Driver",
+        "Top_Edge_Contribution",
+        "Second_Edge_Driver",
+        "Second_Edge_Contribution",
+        "Calibration_Method",
+        "Model_Rationale",
+    ]:
         if c in tpred.columns:
             tcols.append(c)
     out_t = tpred[tcols].copy()
@@ -113,12 +121,14 @@ def build_final_outputs():
         interp.to_csv(os.path.join(BASE, "Final_Model_Interpretability.csv"), index=False)
     if interp_top is not None:
         interp_top.to_csv(os.path.join(BASE, "Final_Model_Interpretability_Top12.csv"), index=False)
+    if interp_summary is not None:
+        interp_summary.to_csv(os.path.join(BASE, "Final_Model_Interpretability_Summary.csv"), index=False)
     if weight_explain is not None:
         weight_explain.to_csv(os.path.join(BASE, "Final_Model_Weight_Explain.csv"), index=False)
-    notes_path = os.path.join(BASE, "Permutation_Model_Interpretability_Notes.md")
-    if os.path.exists(notes_path):
-        with open(notes_path, "r", encoding="utf-8") as src, open(
-            os.path.join(BASE, "Final_Model_Interpretability_Notes.md"), "w", encoding="utf-8"
+    human_readout_path = os.path.join(BASE, "Permutation_Model_Interpretability_Human_Readout.md")
+    if os.path.exists(human_readout_path):
+        with open(human_readout_path, "r", encoding="utf-8") as src, open(
+            os.path.join(BASE, "Final_Model_Interpretability_Human_Readout.md"), "w", encoding="utf-8"
         ) as dst:
             dst.write(src.read())
 
@@ -175,8 +185,9 @@ def main():
         "Final_Leakage_Overfit_Summary.csv",
         "Final_Model_Interpretability.csv",
         "Final_Model_Interpretability_Top12.csv",
+        "Final_Model_Interpretability_Summary.csv",
         "Final_Model_Weight_Explain.csv",
-        "Final_Model_Interpretability_Notes.md",
+        "Final_Model_Interpretability_Human_Readout.md",
         "Final_Visualizations.png",
         "1A_Power_Rankings.csv",
         "1A_Tournament_Predictions.csv",

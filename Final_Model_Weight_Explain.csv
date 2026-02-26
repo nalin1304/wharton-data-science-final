@@ -1,6 +1,6 @@
 Component,Weight,Interpretation
-Elo,0.53,Higher weight means stronger influence in the final blend.
-SGD,0.47,Higher weight means stronger influence in the final blend.
-LogReg,0.0,Higher weight means stronger influence in the final blend.
-XGB,0.0,Higher weight means stronger influence in the final blend.
-XGB2,0.0,Higher weight means stronger influence in the final blend.
+Elo,0.6909883090116911,Higher weight means stronger influence in the final blend.
+SGD,0.2475397524602475,Higher weight means stronger influence in the final blend.
+LogReg,0.0571479428520571,Higher weight means stronger influence in the final blend.
+XGB,0.0028109971890028,Higher weight means stronger influence in the final blend.
+XGB2,0.0015129984870015,Higher weight means stronger influence in the final blend.
