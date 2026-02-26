@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 """
-WHL 2026 - Large Permutation Blend Optimizer
+Permutation search for blend weights.
 
-What this script does:
-1) Verifies data integrity against raw source files.
-2) Builds leakage-safe pregame training set with tuned Elo parameters.
-3) Trains base models and collects OOF predictions on the train segment only.
-4) Searches 1000+ blend permutations (typically 20k+) on OOF objective.
-5) Selects best model by OOF log loss, evaluates once on holdout, and exports outputs.
+Builds OOF predictions from base models, evaluates a large weight library by OOF
+log loss, then reports holdout performance for the selected blend.
 """
 
 import os
@@ -60,6 +56,9 @@ FEATURE_LABELS = {
     "sos": "strength of schedule",
     "form_5": "recent form (last 5 games)",
     "rest": "rest proxy",
+    "elo_form_interaction": "Elo x recent-form interaction",
+    "xg_rest_interaction": "xG trend x rest interaction",
+    "special_teams_net": "power-play minus penalty-kill net rate",
 }
 
 
@@ -455,6 +454,36 @@ def build_oof_and_holdout(train_df, diff_cols):
     }
 
 
+def fit_full_models_for_inference(train_df, diff_cols):
+    """
+    Refit base models on all leakage-safe season games after weight selection.
+    Holdout metrics remain unchanged and are only for audit/reporting.
+    """
+    x = np.nan_to_num(train_df[diff_cols].values, nan=0.0, posinf=0.0, neginf=0.0)
+    y = train_df["home_win"].values.astype(int)
+
+    sc = StandardScaler()
+    x_s = sc.fit_transform(x)
+
+    sgd_base = SGDClassifier(loss="modified_huber", alpha=0.005, max_iter=2500, random_state=wa.RANDOM_STATE)
+    sgd_full = CalibratedClassifierCV(sgd_base, cv=5)
+    sgd_full.fit(x_s, y)
+
+    lr_full = LogisticRegression(max_iter=5000, C=0.30)
+    lr_full.fit(x_s, y)
+
+    xgb1_full, xgb2_full = _xgb_models()
+    xgb1_full.fit(x, y)
+    xgb2_full.fit(x, y)
+
+    return {
+        "SGD": (sgd_full, sc),
+        "LogReg": (lr_full, sc),
+        "XGB": (xgb1_full, None),
+        "XGB2": (xgb2_full, None),
+    }
+
+
 def generate_weight_library(model_count):
     rng = np.random.default_rng(wa.RANDOM_STATE)
     weights = []
@@ -549,12 +578,41 @@ def _friendly_feature_name(diff_col):
     return FEATURE_LABELS.get(base, base)
 
 
+def _effect_size_label(abs_coef):
+    if abs_coef >= 0.30:
+        return "Strong"
+    if abs_coef >= 0.15:
+        return "Moderate"
+    return "Light"
+
+
+def _stability_label(sign_consistency):
+    if not np.isfinite(sign_consistency):
+        return "Unknown"
+    if sign_consistency >= 0.90:
+        return "High"
+    if sign_consistency >= 0.70:
+        return "Medium"
+    return "Low"
+
+
+def _reliability_note(effect_size, stability):
+    if stability == "High" and effect_size in {"Strong", "Moderate"}:
+        return "High confidence directional signal"
+    if stability == "Medium" and effect_size in {"Strong", "Moderate"}:
+        return "Useful, but monitor fold-to-fold drift"
+    if stability == "Low":
+        return "Treat as context only, not a primary driver"
+    return "Supportive secondary signal"
+
+
 def build_interpretability_artifacts(train_df, diff_cols, split, selected_weights, leaderboard):
     """
     Build transparent, human-readable interpretability outputs:
     - standardized logistic surrogate feature effects
+    - fold-to-fold sign stability checks for model behavior consistency
     - model weight summary with base model leaderboard
-    - plain-English notes for non-technical audiences
+    - plain-English notes and a non-technical readout
     """
     x = np.nan_to_num(train_df[diff_cols].values, nan=0.0, posinf=0.0, neginf=0.0)
     y = train_df["home_win"].values.astype(int)
@@ -566,21 +624,56 @@ def build_interpretability_artifacts(train_df, diff_cols, split, selected_weight
     surrogate.fit(xtr_s, ytr)
 
     coef = surrogate.coef_[0]
+    coef_abs = np.abs(coef)
+    coef_abs_sum = float(np.sum(coef_abs)) if float(np.sum(coef_abs)) > 0 else 1.0
+
+    # Measure whether feature directions are stable across forward-validation folds.
+    fold_coefs = []
+    n_splits = 4 if len(ytr) >= 200 else 3
+    if len(ytr) > n_splits:
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+        for tri, _ in tscv.split(xtr):
+            if len(np.unique(ytr[tri])) < 2:
+                continue
+            sc_fold = StandardScaler()
+            xtri_s = sc_fold.fit_transform(xtr[tri])
+            mdl_fold = LogisticRegression(max_iter=5000, C=0.30)
+            mdl_fold.fit(xtri_s, ytr[tri])
+            fold_coefs.append(mdl_fold.coef_[0])
+    fold_coefs = np.asarray(fold_coefs, dtype=float) if len(fold_coefs) else np.empty((0, len(coef)), dtype=float)
+
     rows = []
-    for c, b in zip(diff_cols, coef):
+    for i, (c, b) in enumerate(zip(diff_cols, coef)):
         base = c[:-2] if c.endswith("_d") else c
         direction = "supports home team" if b >= 0 else "supports away team"
+        abs_b = float(abs(b))
+        importance_pct = 100.0 * abs_b / coef_abs_sum
+        if fold_coefs.shape[0] > 0:
+            if b == 0:
+                sign_consistency = 1.0
+            else:
+                sign_consistency = float(np.mean(np.sign(fold_coefs[:, i]) == np.sign(b)))
+        else:
+            sign_consistency = np.nan
+        stability = _stability_label(sign_consistency)
+
         rows.append(
             {
                 "Feature_Column": c,
                 "Feature_Name": _friendly_feature_name(c),
                 "Std_Coef": float(b),
-                "Abs_Std_Coef": float(abs(b)),
+                "Abs_Std_Coef": abs_b,
+                "Importance_Pct": float(importance_pct),
+                "Effect_Size": _effect_size_label(abs_b),
+                "Sign_Consistency": float(sign_consistency) if np.isfinite(sign_consistency) else np.nan,
+                "Stability": stability,
+                "Reliability": _reliability_note(_effect_size_label(abs_b), stability),
                 "Odds_Ratio_per_1SD": float(np.exp(b)),
                 "Direction": direction,
                 "Plain_English": (
-                    f"When the home team is stronger on {FEATURE_LABELS.get(base, base)}, "
-                    f"the model generally {('increases' if b >= 0 else 'decreases')} home win probability."
+                    f"A home edge on {FEATURE_LABELS.get(base, base)} usually "
+                    f"{('increases' if b >= 0 else 'decreases')} home win probability "
+                    f"(importance {importance_pct:.1f}%, stability {stability.lower()})."
                 ),
             }
         )
@@ -589,6 +682,15 @@ def build_interpretability_artifacts(train_df, diff_cols, split, selected_weight
     feat.insert(0, "Rank", np.arange(1, len(feat) + 1))
     feat.to_csv(os.path.join(OUT, "Permutation_Model_Interpretability.csv"), index=False)
     feat.head(12).to_csv(os.path.join(OUT, "Permutation_Model_Interpretability_Top12.csv"), index=False)
+    summary = pd.DataFrame(
+        [
+            {"Metric": "Top_Feature", "Value": feat.iloc[0]["Feature_Name"] if len(feat) else ""},
+            {"Metric": "Top_Feature_Importance_Pct", "Value": float(feat.iloc[0]["Importance_Pct"]) if len(feat) else 0.0},
+            {"Metric": "High_Stability_Features", "Value": int((feat["Stability"] == "High").sum()) if len(feat) else 0},
+            {"Metric": "Low_Stability_Features", "Value": int((feat["Stability"] == "Low").sum()) if len(feat) else 0},
+        ]
+    )
+    summary.to_csv(os.path.join(OUT, "Permutation_Model_Interpretability_Summary.csv"), index=False)
 
     weight_tbl = pd.DataFrame(
         [
@@ -600,29 +702,39 @@ def build_interpretability_artifacts(train_df, diff_cols, split, selected_weight
 
     top_pos = feat[feat["Std_Coef"] > 0].head(5)
     top_neg = feat[feat["Std_Coef"] < 0].head(5)
-    top_leader = leaderboard.sort_values("Holdout_Log_Loss").head(5)
 
-    notes = []
-    notes.append("# Final Model Interpretability Notes")
-    notes.append("")
-    notes.append("## Blend Structure")
-    notes.append("Selected blend uses a weighted average of model probabilities.")
-    notes.append(", ".join([f"- {m}: {w:.3f}" for m, w in zip(BLEND_MODELS, selected_weights)]))
-    notes.append("")
-    notes.append("## Strongest Signals Supporting Home Teams")
+    human_lines = []
+    human_lines.append("# Human Readout: How The Model Makes Calls")
+    human_lines.append("")
+    human_lines.append(
+        "The final prediction blends several model opinions. Elo supplies baseline team strength, "
+        "while feature-driven models add matchup context."
+    )
+    human_lines.append("")
+    human_lines.append("## Blend Weights")
+    for m, w in zip(BLEND_MODELS, selected_weights):
+        human_lines.append(f"- {m}: {w:.3f}")
+    human_lines.append("")
+    human_lines.append("## Most Influential Home-Leaning Factors")
     for _, r in top_pos.iterrows():
-        notes.append(f"- {r['Feature_Name']} (std coef {r['Std_Coef']:.3f})")
-    notes.append("")
-    notes.append("## Strongest Signals Supporting Away Teams")
+        human_lines.append(
+            f"- {r['Feature_Name']}: stronger home edge usually helps "
+            f"(importance {r['Importance_Pct']:.1f}%, stability {r['Stability']})."
+        )
+    human_lines.append("")
+    human_lines.append("## Most Influential Away-Leaning Factors")
     for _, r in top_neg.iterrows():
-        notes.append(f"- {r['Feature_Name']} (std coef {r['Std_Coef']:.3f})")
-    notes.append("")
-    notes.append("## Base Model Context (Holdout LL)")
-    for _, r in top_leader.iterrows():
-        notes.append(f"- {r['Model']}: LL={r['Holdout_Log_Loss']:.6f}, Acc={r['Holdout_Accuracy']:.4f}")
+        human_lines.append(
+            f"- {r['Feature_Name']}: stronger away edge usually hurts home win odds "
+            f"(importance {r['Importance_Pct']:.1f}%, stability {r['Stability']})."
+        )
+    human_lines.append("")
+    human_lines.append("## What To Trust Most")
+    human_lines.append("- Trust holdout log loss/AUC for performance.")
+    human_lines.append("- Trust this readout for directionality and communication.")
 
-    with open(os.path.join(OUT, "Permutation_Model_Interpretability_Notes.md"), "w", encoding="utf-8") as fh:
-        fh.write("\n".join(notes) + "\n")
+    with open(os.path.join(OUT, "Permutation_Model_Interpretability_Human_Readout.md"), "w", encoding="utf-8") as fh:
+        fh.write("\n".join(human_lines) + "\n")
 
 
 def main():
@@ -666,7 +778,7 @@ def main():
     hold_top.to_csv(os.path.join(OUT, "Permutation_Holdout_Top.csv"), index=False)
 
     # Selection policy: choose by OOF objective only, then report holdout.
-    selected = hold_top.iloc[0].copy()
+    selected = search.iloc[0].copy()
     selected_weights = np.array([selected[f"w_{m}"] for m in BLEND_MODELS], dtype=float)
 
     p_sel = _clip(selected_weights @ te_mat.T)
@@ -737,7 +849,7 @@ def main():
     build_interpretability_artifacts(train_df, diff_cols, preds["split"], selected_weights, leaderboard)
 
     print("\n[5/7] Leakage + overfit checks...")
-    leak = wa.run_leakage_and_overfit_checks(train_df, diff_cols, preds["split"])
+    leak = wa.run_leakage_and_overfit_checks(train_df, diff_cols, preds["split"], raw_df=ctx["raw"])
     leak = pd.concat(
         [
             leak,
@@ -757,6 +869,7 @@ def main():
     leak.to_csv(os.path.join(OUT, "Permutation_Leakage_Overfit_Report.csv"), index=False)
 
     print("\n[6/7] Build tournament predictions for selected blend...")
+    full_models = fit_full_models_for_inference(train_df, diff_cols)
     base_tpred = wa.predict_matchups(
         ctx["matchups"],
         "17_Elo",
@@ -769,10 +882,10 @@ def main():
     )
     base_tpred["Win_Prob_Elo"] = base_tpred["Win_Prob"]
 
-    sgd_model, sgd_scaler = preds["models"]["SGD"]
-    lr_model, lr_scaler = preds["models"]["LogReg"]
-    xgb1_model, _ = preds["models"]["XGB"]
-    xgb2_model, _ = preds["models"]["XGB2"]
+    sgd_model, sgd_scaler = full_models["SGD"]
+    lr_model, lr_scaler = full_models["LogReg"]
+    xgb1_model, _ = full_models["XGB"]
+    xgb2_model, _ = full_models["XGB2"]
 
     p_sgd = predict_matchups_model(ctx["matchups"], ctx["final_df"], MODEL_FEATURES, sgd_model, sgd_scaler)
     p_lr = predict_matchups_model(ctx["matchups"], ctx["final_df"], MODEL_FEATURES, lr_model, lr_scaler)
@@ -801,21 +914,29 @@ def main():
         base_tpred[f"Edge_Contrib_{m}"] = np.round(selected_weights[i] * (blend_mat[:, i] - 0.5), 6)
 
     edge_mat = np.column_stack([base_tpred[f"Edge_Contrib_{m}"].values for m in BLEND_MODELS])
-    driver_idx = np.argmax(np.abs(edge_mat), axis=1)
-    driver_name = np.array(BLEND_MODELS, dtype=object)[driver_idx]
-    driver_edge = edge_mat[np.arange(len(edge_mat)), driver_idx]
+    order_idx = np.argsort(-np.abs(edge_mat), axis=1)
+    top1_idx = order_idx[:, 0]
+    top2_idx = order_idx[:, 1] if edge_mat.shape[1] > 1 else order_idx[:, 0]
+    driver_name = np.array(BLEND_MODELS, dtype=object)[top1_idx]
+    driver_edge = edge_mat[np.arange(len(edge_mat)), top1_idx]
+    second_name = np.array(BLEND_MODELS, dtype=object)[top2_idx]
+    second_edge = edge_mat[np.arange(len(edge_mat)), top2_idx]
 
     base_tpred["Win_Prob_SelectedBlend"] = np.round(p_blend, 6)
     base_tpred["Predicted_Winner"] = np.where(base_tpred["Win_Prob_SelectedBlend"] >= 0.5, base_tpred["Home_Team"], base_tpred["Away_Team"])
     base_tpred["Confidence"] = np.round(np.maximum(base_tpred["Win_Prob_SelectedBlend"], 1 - base_tpred["Win_Prob_SelectedBlend"]), 4)
     base_tpred["Top_Edge_Driver"] = driver_name
     base_tpred["Top_Edge_Contribution"] = np.round(driver_edge, 6)
+    base_tpred["Second_Edge_Driver"] = second_name
+    base_tpred["Second_Edge_Contribution"] = np.round(second_edge, 6)
     base_tpred["Model_Rationale"] = [
         (
-            f"{winner} favored; strongest signal is {drv} "
-            f"({'home-leaning' if edg >= 0 else 'away-leaning'}) with edge contribution {edg:+.3f}."
+            f"{winner} favored; strongest signals are {drv1} ({'home-leaning' if edg1 >= 0 else 'away-leaning'}, {edg1:+.3f}) "
+            f"and {drv2} ({'home-leaning' if edg2 >= 0 else 'away-leaning'}, {edg2:+.3f})."
         )
-        for winner, drv, edg in zip(base_tpred["Predicted_Winner"], driver_name, driver_edge)
+        for winner, drv1, edg1, drv2, edg2 in zip(
+            base_tpred["Predicted_Winner"], driver_name, driver_edge, second_name, second_edge
+        )
     ]
     base_tpred = wa.attach_robustness_layer(base_tpred, ctx["final_df"])
     base_tpred.to_csv(os.path.join(OUT, "Permutation_Best_Tournament_Predictions.csv"), index=False)
@@ -841,8 +962,9 @@ def main():
     print("  - Permutation_Best_Model_Selection.csv")
     print("  - Permutation_Model_Interpretability.csv")
     print("  - Permutation_Model_Interpretability_Top12.csv")
+    print("  - Permutation_Model_Interpretability_Summary.csv")
     print("  - Permutation_Model_Weight_Explain.csv")
-    print("  - Permutation_Model_Interpretability_Notes.md")
+    print("  - Permutation_Model_Interpretability_Human_Readout.md")
     print("  - Permutation_Leakage_Overfit_Report.csv")
     print("  - Permutation_Best_Tournament_Predictions.csv")
     print("  - Permutation_Wharton_Alignment_Checklist.csv")

@@ -101,10 +101,10 @@
   <div class="wrap">
     <section class="hero">
       <h1 class="title">WHL 2026 Final Analytics Report</h1>
-      <div class="subtitle">Generated 2026-02-21 15:38 | Competition-aligned, leakage-safe model selection using time-split OOF optimization.</div>
+      <div class="subtitle">Generated 2026-02-25 23:16 | Competition-aligned, leakage-safe model selection using time-split OOF optimization.</div>
       <div class="pill">Selected Model: Blend_Selected_By_OOF</div>
-      <div class="subtitle" style="margin-top:8px;">Blend weights: Elo:0.530000,SGD:0.470000,LogReg:0.000000,XGB:0.000000,XGB2:0.000000</div>
-      <div class="kpi-grid"><div class="kpi-card"><div class="kpi-title">OOF Log Loss</div><div class="kpi-val">0.680486</div></div><div class="kpi-card"><div class="kpi-title">Holdout Log Loss</div><div class="kpi-val">0.669612</div></div><div class="kpi-card"><div class="kpi-title">Holdout Accuracy</div><div class="kpi-val">57.86%</div></div><div class="kpi-card"><div class="kpi-title">Holdout AUC</div><div class="kpi-val">0.5645</div></div><div class="kpi-card"><div class="kpi-title">Holdout Brier</div><div class="kpi-val">0.238420</div></div><div class="kpi-card"><div class="kpi-title">Permutations</div><div class="kpi-val">21995</div></div></div>
+      <div class="subtitle" style="margin-top:8px;">Blend weights: Elo:0.690988,SGD:0.247540,LogReg:0.057148,XGB:0.002811,XGB2:0.001513</div>
+      <div class="kpi-grid"><div class="kpi-card"><div class="kpi-title">OOF Log Loss</div><div class="kpi-val">0.681809</div></div><div class="kpi-card"><div class="kpi-title">Holdout Log Loss</div><div class="kpi-val">0.669281</div></div><div class="kpi-card"><div class="kpi-title">Holdout Accuracy</div><div class="kpi-val">58.21%</div></div><div class="kpi-card"><div class="kpi-title">Holdout AUC</div><div class="kpi-val">0.5628</div></div><div class="kpi-card"><div class="kpi-title">Holdout Brier</div><div class="kpi-val">0.238300</div></div><div class="kpi-card"><div class="kpi-title">Permutations</div><div class="kpi-val">21995</div></div></div>
       <div class="subtitle" style="margin-top:10px;">Data integrity checks passed: 20/20</div>
     </section>
 
@@ -420,272 +420,306 @@
       <th>Edge_Stability</th>
       <th>Top_Edge_Driver</th>
       <th>Top_Edge_Contribution</th>
+      <th>Second_Edge_Driver</th>
+      <th>Second_Edge_Contribution</th>
       <th>Model_Rationale</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>netherlands vs mongolia</td>
-      <td>netherlands</td>
-      <td>mongolia</td>
-      <td>0.6727</td>
-      <td>netherlands</td>
-      <td>0.6727</td>
-      <td>0.7410</td>
-      <td>0.6591</td>
-      <td>0.8150</td>
-      <td>0.0000</td>
-      <td>High</td>
-      <td>Elo</td>
-      <td>0.1285</td>
-      <td>netherlands favored; strongest signal is Elo (home-leaning) with edge contribution +0.128.</td>
-    </tr>
-    <tr>
       <td>brazil vs kazakhstan</td>
       <td>brazil</td>
       <td>kazakhstan</td>
-      <td>0.6717</td>
+      <td>0.6823</td>
       <td>brazil</td>
-      <td>0.6717</td>
+      <td>0.6823</td>
       <td>0.7346</td>
       <td>0.6463</td>
       <td>0.8081</td>
       <td>0.0000</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.1266</td>
-      <td>brazil favored; strongest signal is Elo (home-leaning) with edge contribution +0.127.</td>
+      <td>0.1651</td>
+      <td>SGD</td>
+      <td>0.008916</td>
+      <td>brazil favored; strongest signals are Elo (home-leaning, +0.165) and SGD (home-leaning, +0.009).</td>
+    </tr>
+    <tr>
+      <td>netherlands vs mongolia</td>
+      <td>netherlands</td>
+      <td>mongolia</td>
+      <td>0.6700</td>
+      <td>netherlands</td>
+      <td>0.6700</td>
+      <td>0.7410</td>
+      <td>0.6591</td>
+      <td>0.8150</td>
+      <td>0.0000</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.1675</td>
+      <td>LogReg</td>
+      <td>0.003625</td>
+      <td>netherlands favored; strongest signals are Elo (home-leaning, +0.167) and LogReg (home-leaning, +0.004).</td>
     </tr>
     <tr>
       <td>peru vs rwanda</td>
       <td>peru</td>
       <td>rwanda</td>
-      <td>0.6288</td>
+      <td>0.6450</td>
       <td>peru</td>
-      <td>0.6288</td>
+      <td>0.6450</td>
       <td>0.7059</td>
       <td>0.6188</td>
       <td>0.7816</td>
       <td>0.0000</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.1097</td>
-      <td>peru favored; strongest signal is Elo (home-leaning) with edge contribution +0.110.</td>
+      <td>0.1430</td>
+      <td>SGD</td>
+      <td>0.002374</td>
+      <td>peru favored; strongest signals are Elo (home-leaning, +0.143) and SGD (home-leaning, +0.002).</td>
     </tr>
     <tr>
       <td>thailand vs oman</td>
       <td>thailand</td>
       <td>oman</td>
-      <td>0.6223</td>
+      <td>0.6336</td>
       <td>thailand</td>
-      <td>0.6223</td>
+      <td>0.6336</td>
       <td>0.6898</td>
       <td>0.6265</td>
       <td>0.7494</td>
       <td>0.0000</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.1013</td>
-      <td>thailand favored; strongest signal is Elo (home-leaning) with edge contribution +0.101.</td>
-    </tr>
-    <tr>
-      <td>pakistan vs germany</td>
-      <td>pakistan</td>
-      <td>germany</td>
-      <td>0.6111</td>
-      <td>pakistan</td>
-      <td>0.6111</td>
-      <td>0.6693</td>
-      <td>0.5929</td>
-      <td>0.7411</td>
-      <td>0.0000</td>
-      <td>High</td>
-      <td>Elo</td>
-      <td>0.0906</td>
-      <td>pakistan favored; strongest signal is Elo (home-leaning) with edge contribution +0.091.</td>
+      <td>0.1320</td>
+      <td>SGD</td>
+      <td>0.001619</td>
+      <td>thailand favored; strongest signals are Elo (home-leaning, +0.132) and SGD (home-leaning, +0.002).</td>
     </tr>
     <tr>
       <td>china vs france</td>
       <td>china</td>
       <td>france</td>
-      <td>0.6084</td>
+      <td>0.6231</td>
       <td>china</td>
-      <td>0.6084</td>
+      <td>0.6231</td>
       <td>0.6471</td>
       <td>0.5413</td>
       <td>0.7401</td>
       <td>0.0015</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.0772</td>
-      <td>china favored; strongest signal is Elo (home-leaning) with edge contribution +0.077.</td>
+      <td>0.1007</td>
+      <td>SGD</td>
+      <td>0.012060</td>
+      <td>china favored; strongest signals are Elo (home-leaning, +0.101) and SGD (home-leaning, +0.012).</td>
     </tr>
     <tr>
       <td>india vs usa</td>
       <td>india</td>
       <td>usa</td>
-      <td>0.6014</td>
+      <td>0.6114</td>
       <td>india</td>
-      <td>0.6014</td>
+      <td>0.6114</td>
       <td>0.6617</td>
       <td>0.5687</td>
       <td>0.7517</td>
       <td>0.0000</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.0871</td>
-      <td>india favored; strongest signal is Elo (home-leaning) with edge contribution +0.087.</td>
+      <td>0.1135</td>
+      <td>LogReg</td>
+      <td>-0.001409</td>
+      <td>india favored; strongest signals are Elo (home-leaning, +0.114) and LogReg (away-leaning, -0.001).</td>
+    </tr>
+    <tr>
+      <td>pakistan vs germany</td>
+      <td>pakistan</td>
+      <td>germany</td>
+      <td>0.6105</td>
+      <td>pakistan</td>
+      <td>0.6105</td>
+      <td>0.6693</td>
+      <td>0.5929</td>
+      <td>0.7411</td>
+      <td>0.0000</td>
+      <td>High</td>
+      <td>Elo</td>
+      <td>0.1181</td>
+      <td>SGD</td>
+      <td>-0.005266</td>
+      <td>pakistan favored; strongest signals are Elo (home-leaning, +0.118) and SGD (away-leaning, -0.005).</td>
     </tr>
     <tr>
       <td>panama vs switzerland</td>
       <td>panama</td>
       <td>switzerland</td>
-      <td>0.5878</td>
+      <td>0.6013</td>
       <td>panama</td>
-      <td>0.5878</td>
+      <td>0.6013</td>
       <td>0.6358</td>
       <td>0.5418</td>
       <td>0.7251</td>
       <td>0.0035</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.0727</td>
-      <td>panama favored; strongest signal is Elo (home-leaning) with edge contribution +0.073.</td>
+      <td>0.0948</td>
+      <td>SGD</td>
+      <td>0.006045</td>
+      <td>panama favored; strongest signals are Elo (home-leaning, +0.095) and SGD (home-leaning, +0.006).</td>
     </tr>
     <tr>
       <td>iceland vs canada</td>
       <td>iceland</td>
       <td>canada</td>
-      <td>0.5810</td>
+      <td>0.5900</td>
       <td>iceland</td>
-      <td>0.5810</td>
+      <td>0.5900</td>
       <td>0.6248</td>
       <td>0.5331</td>
       <td>0.7111</td>
       <td>0.0030</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.0668</td>
-      <td>iceland favored; strongest signal is Elo (home-leaning) with edge contribution +0.067.</td>
+      <td>0.0871</td>
+      <td>LogReg</td>
+      <td>0.001353</td>
+      <td>iceland favored; strongest signals are Elo (home-leaning, +0.087) and LogReg (home-leaning, +0.001).</td>
     </tr>
     <tr>
       <td>ethiopia vs saudi_arabia</td>
       <td>ethiopia</td>
       <td>saudi_arabia</td>
-      <td>0.5652</td>
+      <td>0.5770</td>
       <td>ethiopia</td>
-      <td>0.5652</td>
+      <td>0.5770</td>
       <td>0.6030</td>
       <td>0.5119</td>
       <td>0.6870</td>
       <td>0.0130</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.0551</td>
-      <td>ethiopia favored; strongest signal is Elo (home-leaning) with edge contribution +0.055.</td>
-    </tr>
-    <tr>
-      <td>philippines vs morocco</td>
-      <td>philippines</td>
-      <td>morocco</td>
-      <td>0.5648</td>
-      <td>philippines</td>
-      <td>0.5648</td>
-      <td>0.6009</td>
-      <td>0.4915</td>
-      <td>0.7022</td>
-      <td>0.0340</td>
-      <td>Medium</td>
-      <td>Elo</td>
-      <td>0.0523</td>
-      <td>philippines favored; strongest signal is Elo (home-leaning) with edge contribution +0.052.</td>
+      <td>0.0718</td>
+      <td>SGD</td>
+      <td>0.006479</td>
+      <td>ethiopia favored; strongest signals are Elo (home-leaning, +0.072) and SGD (home-leaning, +0.006).</td>
     </tr>
     <tr>
       <td>uk vs mexico</td>
       <td>uk</td>
       <td>mexico</td>
-      <td>0.5632</td>
+      <td>0.5740</td>
       <td>uk</td>
-      <td>0.5632</td>
+      <td>0.5740</td>
       <td>0.5955</td>
       <td>0.4938</td>
       <td>0.6968</td>
       <td>0.0310</td>
       <td>Medium</td>
       <td>Elo</td>
-      <td>0.0502</td>
-      <td>uk favored; strongest signal is Elo (home-leaning) with edge contribution +0.050.</td>
+      <td>0.0654</td>
+      <td>SGD</td>
+      <td>0.008573</td>
+      <td>uk favored; strongest signals are Elo (home-leaning, +0.065) and SGD (home-leaning, +0.009).</td>
     </tr>
     <tr>
       <td>indonesia vs uae</td>
       <td>indonesia</td>
       <td>uae</td>
-      <td>0.5619</td>
+      <td>0.5735</td>
       <td>indonesia</td>
-      <td>0.5619</td>
+      <td>0.5735</td>
       <td>0.6045</td>
       <td>0.5085</td>
       <td>0.6947</td>
       <td>0.0190</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.0555</td>
-      <td>indonesia favored; strongest signal is Elo (home-leaning) with edge contribution +0.056.</td>
+      <td>0.0724</td>
+      <td>SGD</td>
+      <td>0.002139</td>
+      <td>indonesia favored; strongest signals are Elo (home-leaning, +0.072) and SGD (home-leaning, +0.002).</td>
     </tr>
     <tr>
       <td>guatemala vs south_korea</td>
       <td>guatemala</td>
       <td>south_korea</td>
-      <td>0.5583</td>
+      <td>0.5699</td>
       <td>guatemala</td>
-      <td>0.5583</td>
+      <td>0.5699</td>
       <td>0.6023</td>
       <td>0.5121</td>
       <td>0.6880</td>
       <td>0.0120</td>
       <td>High</td>
       <td>Elo</td>
-      <td>0.0540</td>
-      <td>guatemala favored; strongest signal is Elo (home-leaning) with edge contribution +0.054.</td>
+      <td>0.0704</td>
+      <td>LogReg</td>
+      <td>-0.003859</td>
+      <td>guatemala favored; strongest signals are Elo (home-leaning, +0.070) and LogReg (away-leaning, -0.004).</td>
+    </tr>
+    <tr>
+      <td>philippines vs morocco</td>
+      <td>philippines</td>
+      <td>morocco</td>
+      <td>0.5632</td>
+      <td>philippines</td>
+      <td>0.5632</td>
+      <td>0.6009</td>
+      <td>0.4915</td>
+      <td>0.7022</td>
+      <td>0.0340</td>
+      <td>Medium</td>
+      <td>Elo</td>
+      <td>0.0681</td>
+      <td>LogReg</td>
+      <td>-0.003922</td>
+      <td>philippines favored; strongest signals are Elo (home-leaning, +0.068) and LogReg (away-leaning, -0.004).</td>
     </tr>
     <tr>
       <td>singapore vs new_zealand</td>
       <td>singapore</td>
       <td>new_zealand</td>
-      <td>0.5304</td>
+      <td>0.5427</td>
       <td>singapore</td>
-      <td>0.5304</td>
+      <td>0.5427</td>
       <td>0.5540</td>
       <td>0.4569</td>
       <td>0.6489</td>
       <td>0.1325</td>
       <td>Medium</td>
       <td>Elo</td>
-      <td>0.0279</td>
-      <td>singapore favored; strongest signal is Elo (home-leaning) with edge contribution +0.028.</td>
+      <td>0.0364</td>
+      <td>SGD</td>
+      <td>0.006516</td>
+      <td>singapore favored; strongest signals are Elo (home-leaning, +0.036) and SGD (home-leaning, +0.007).</td>
     </tr>
     <tr>
       <td>vietnam vs serbia</td>
       <td>vietnam</td>
       <td>serbia</td>
-      <td>0.5141</td>
+      <td>0.5220</td>
       <td>vietnam</td>
-      <td>0.5141</td>
+      <td>0.5220</td>
       <td>0.5393</td>
       <td>0.4730</td>
       <td>0.6062</td>
       <td>0.1275</td>
       <td>Medium</td>
       <td>Elo</td>
-      <td>0.0214</td>
-      <td>vietnam favored; strongest signal is Elo (home-leaning) with edge contribution +0.021.</td>
+      <td>0.0279</td>
+      <td>LogReg</td>
+      <td>-0.004126</td>
+      <td>vietnam favored; strongest signals are Elo (home-leaning, +0.028) and LogReg (away-leaning, -0.004).</td>
     </tr>
   </tbody>
 </table></div>
       </div>
       <div class="card">
         <h2 class="h2">How The Model Thinks</h2>
-        <div class="subtitle">Final Model Interpretability Notes<br/>Blend Structure<br/>Selected blend uses a weighted average of model probabilities.<br/>- Elo: 0.530, - SGD: 0.470, - LogReg: 0.000, - XGB: 0.000, - XGB2: 0.000<br/>Strongest Signals Supporting Home Teams<br/>- PDO (shooting + save luck proxy) (std coef 0.314)<br/>- rolling xGF (20 games) (std coef 0.252)<br/>- win percentage (std coef 0.199)<br/>- even-strength xG share (std coef 0.079)<br/>- pythagorean win expectation (std coef 0.058)<br/>Strongest Signals Supporting Away Teams<br/>- close-game win percentage (std coef -0.229)</div>
+        <div class="subtitle">Human Readout: How The Model Makes Calls<br/>The final prediction blends several model opinions. Elo supplies baseline team strength, while feature-driven models add matchup context.<br/>Blend Weights<br/>- Elo: 0.691<br/>- SGD: 0.248<br/>- LogReg: 0.057<br/>- XGB: 0.003<br/>- XGB2: 0.002<br/>Most Influential Home-Leaning Factors<br/>- PDO (shooting + save luck proxy): stronger home edge usually helps (importance 14.7%, stability High).<br/>- win percentage: stronger home edge usually helps (importance 9.5%, stability High).<br/>- rolling xGF (20 games): stronger home edge usually helps (importance 7.9%, stability Low).</div>
         <h3 class="h3" style="margin-top:12px;">Blend Component Weights</h3>
         <div class="table-wrap"><table border="1" class="dataframe report-table" id="weight_table">
   <thead>
@@ -698,27 +732,27 @@
   <tbody>
     <tr>
       <td>Elo</td>
-      <td>0.5300</td>
+      <td>0.6910</td>
       <td>Higher weight means stronger influence in the final blend.</td>
     </tr>
     <tr>
       <td>SGD</td>
-      <td>0.4700</td>
+      <td>0.2475</td>
       <td>Higher weight means stronger influence in the final blend.</td>
     </tr>
     <tr>
       <td>LogReg</td>
-      <td>0.0000</td>
+      <td>0.0571</td>
       <td>Higher weight means stronger influence in the final blend.</td>
     </tr>
     <tr>
       <td>XGB</td>
-      <td>0.0000</td>
+      <td>0.0028</td>
       <td>Higher weight means stronger influence in the final blend.</td>
     </tr>
     <tr>
       <td>XGB2</td>
-      <td>0.0000</td>
+      <td>0.0015</td>
       <td>Higher weight means stronger influence in the final blend.</td>
     </tr>
   </tbody>
@@ -726,13 +760,15 @@
       </div>
       <div class="card">
         <h2 class="h2">Top Feature Drivers (Surrogate)</h2>
-        <div class="subtitle">Direction is from the home-team perspective.</div>
+        <div class="subtitle">Direction is from the home-team perspective. Top global driver: PDO (shooting + save luck proxy) (14.7% importance). High-stability features: 10.</div>
         <div class="table-wrap"><table border="1" class="dataframe report-table" id="interp_table">
   <thead>
     <tr style="text-align: right;">
       <th>Rank</th>
       <th>Feature_Name</th>
       <th>Std_Coef</th>
+      <th>Importance_Pct</th>
+      <th>Stability</th>
       <th>Direction</th>
       <th>Plain_English</th>
     </tr>
@@ -741,86 +777,110 @@
     <tr>
       <td>1</td>
       <td>PDO (shooting + save luck proxy)</td>
-      <td>0.3135</td>
+      <td>0.3105</td>
+      <td>14.7</td>
+      <td>High</td>
       <td>supports home team</td>
-      <td>When the home team is stronger on PDO (shooting + save luck proxy), the model generally increases home win probability.</td>
+      <td>A home edge on PDO (shooting + save luck proxy) usually increases home win probability (importance 14.7%, stability high).</td>
     </tr>
     <tr>
       <td>2</td>
-      <td>rolling xGF (20 games)</td>
-      <td>0.2515</td>
-      <td>supports home team</td>
-      <td>When the home team is stronger on rolling xGF (20 games), the model generally increases home win probability.</td>
+      <td>close-game win percentage</td>
+      <td>-0.2285</td>
+      <td>10.8</td>
+      <td>High</td>
+      <td>supports away team</td>
+      <td>A home edge on close-game win percentage usually decreases home win probability (importance 10.8%, stability high).</td>
     </tr>
     <tr>
       <td>3</td>
-      <td>close-game win percentage</td>
-      <td>-0.2289</td>
-      <td>supports away team</td>
-      <td>When the home team is stronger on close-game win percentage, the model generally decreases home win probability.</td>
+      <td>win percentage</td>
+      <td>0.2016</td>
+      <td>9.5</td>
+      <td>High</td>
+      <td>supports home team</td>
+      <td>A home edge on win percentage usually increases home win probability (importance 9.5%, stability high).</td>
     </tr>
     <tr>
       <td>4</td>
-      <td>win percentage</td>
-      <td>0.1994</td>
-      <td>supports home team</td>
-      <td>When the home team is stronger on win percentage, the model generally increases home win probability.</td>
+      <td>pregame Elo rating</td>
+      <td>-0.1793</td>
+      <td>8.5</td>
+      <td>Medium</td>
+      <td>supports away team</td>
+      <td>A home edge on pregame Elo rating usually decreases home win probability (importance 8.5%, stability medium).</td>
     </tr>
     <tr>
       <td>5</td>
-      <td>rolling xGA (20 games)</td>
-      <td>-0.1888</td>
-      <td>supports away team</td>
-      <td>When the home team is stronger on rolling xGA (20 games), the model generally decreases home win probability.</td>
+      <td>rolling xGF (20 games)</td>
+      <td>0.1664</td>
+      <td>7.9</td>
+      <td>Low</td>
+      <td>supports home team</td>
+      <td>A home edge on rolling xGF (20 games) usually increases home win probability (importance 7.9%, stability low).</td>
     </tr>
     <tr>
       <td>6</td>
-      <td>pregame Elo rating</td>
-      <td>-0.1772</td>
-      <td>supports away team</td>
-      <td>When the home team is stronger on pregame Elo rating, the model generally decreases home win probability.</td>
+      <td>xG trend x rest interaction</td>
+      <td>0.1347</td>
+      <td>6.4</td>
+      <td>Low</td>
+      <td>supports home team</td>
+      <td>A home edge on xG trend x rest interaction usually increases home win probability (importance 6.4%, stability low).</td>
     </tr>
     <tr>
       <td>7</td>
       <td>shelter index</td>
-      <td>-0.1210</td>
+      <td>-0.1213</td>
+      <td>5.7</td>
+      <td>High</td>
       <td>supports away team</td>
-      <td>When the home team is stronger on shelter index, the model generally decreases home win probability.</td>
+      <td>A home edge on shelter index usually decreases home win probability (importance 5.7%, stability high).</td>
     </tr>
     <tr>
       <td>8</td>
       <td>recent form (last 5 games)</td>
       <td>-0.1157</td>
+      <td>5.5</td>
+      <td>High</td>
       <td>supports away team</td>
-      <td>When the home team is stronger on recent form (last 5 games), the model generally decreases home win probability.</td>
+      <td>A home edge on recent form (last 5 games) usually decreases home win probability (importance 5.5%, stability high).</td>
     </tr>
     <tr>
       <td>9</td>
-      <td>rest proxy</td>
-      <td>-0.0807</td>
+      <td>rolling xGA (20 games)</td>
+      <td>-0.1102</td>
+      <td>5.2</td>
+      <td>Low</td>
       <td>supports away team</td>
-      <td>When the home team is stronger on rest proxy, the model generally decreases home win probability.</td>
+      <td>A home edge on rolling xGA (20 games) usually decreases home win probability (importance 5.2%, stability low).</td>
     </tr>
     <tr>
       <td>10</td>
-      <td>even-strength xG share</td>
-      <td>0.0786</td>
-      <td>supports home team</td>
-      <td>When the home team is stronger on even-strength xG share, the model generally increases home win probability.</td>
+      <td>rest proxy</td>
+      <td>-0.0806</td>
+      <td>3.8</td>
+      <td>High</td>
+      <td>supports away team</td>
+      <td>A home edge on rest proxy usually decreases home win probability (importance 3.8%, stability high).</td>
     </tr>
     <tr>
       <td>11</td>
-      <td>power-play xG per 60</td>
-      <td>-0.0729</td>
-      <td>supports away team</td>
-      <td>When the home team is stronger on power-play xG per 60, the model generally decreases home win probability.</td>
+      <td>even-strength xG share</td>
+      <td>0.0780</td>
+      <td>3.7</td>
+      <td>Low</td>
+      <td>supports home team</td>
+      <td>A home edge on even-strength xG share usually increases home win probability (importance 3.7%, stability low).</td>
     </tr>
     <tr>
       <td>12</td>
-      <td>penalty-kill xGA per 60</td>
-      <td>-0.0593</td>
+      <td>power-play xG per 60</td>
+      <td>-0.0735</td>
+      <td>3.5</td>
+      <td>Low</td>
       <td>supports away team</td>
-      <td>When the home team is stronger on penalty-kill xGA per 60, the model generally decreases home win probability.</td>
+      <td>A home edge on power-play xG per 60 usually decreases home win probability (importance 3.5%, stability low).</td>
     </tr>
   </tbody>
 </table></div>
@@ -977,6 +1037,132 @@
   </thead>
   <tbody>
     <tr>
+      <td>raw_dataset_rows</td>
+      <td>25827.000000</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Season raw table row count</td>
+    </tr>
+    <tr>
+      <td>raw_dataset_columns</td>
+      <td>26.000000</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Season raw table column count</td>
+    </tr>
+    <tr>
+      <td>raw_missing_values</td>
+      <td>0.000000</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Total missing cells in raw table</td>
+    </tr>
+    <tr>
+      <td>raw_duplicate_rows</td>
+      <td>0.000000</td>
+      <td><span class="badge ok">PASS</span></td>
+      <td>Exact duplicate rows in raw table</td>
+    </tr>
+    <tr>
+      <td>raw_repeated_game_rows</td>
+      <td>24515.000000</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>rows=25827; unique_game_id=1312</td>
+    </tr>
+    <tr>
+      <td>raw_random_row_split_game_id_overlap</td>
+      <td>1306.000000</td>
+      <td><span class="badge bad">FAIL</span></td>
+      <td>test_overlap_ratio=1.0000</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_home_goals_1</td>
+      <td>0.944369</td>
+      <td><span class="badge warn">WARN</span></td>
+      <td>Feature=home_assists</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_home_goals_2</td>
+      <td>0.629236</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=home_xg</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_home_goals_3</td>
+      <td>0.610613</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=home_shots</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_home_goals_4</td>
+      <td>0.515642</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=away_penalties_committed</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_home_goals_5</td>
+      <td>0.513208</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=away_penalty_minutes</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_home_goals_6</td>
+      <td>0.431528</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=home_max_xg</td>
+    </tr>
+    <tr>
+      <td>raw_high_corr_ge_0p90_home_goals</td>
+      <td>1.000000</td>
+      <td><span class="badge warn">WARN</span></td>
+      <td>home_assists</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_away_goals_1</td>
+      <td>0.941906</td>
+      <td><span class="badge warn">WARN</span></td>
+      <td>Feature=away_assists</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_away_goals_2</td>
+      <td>0.591355</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=away_xg</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_away_goals_3</td>
+      <td>0.567976</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=away_shots</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_away_goals_4</td>
+      <td>0.472256</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=home_penalties_committed</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_away_goals_5</td>
+      <td>0.472024</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=home_penalty_minutes</td>
+    </tr>
+    <tr>
+      <td>raw_top_corr_away_goals_6</td>
+      <td>0.410958</td>
+      <td><span class="badge info">INFO</span></td>
+      <td>Feature=away_max_xg</td>
+    </tr>
+    <tr>
+      <td>raw_high_corr_ge_0p90_away_goals</td>
+      <td>1.000000</td>
+      <td><span class="badge warn">WARN</span></td>
+      <td>away_assists</td>
+    </tr>
+    <tr>
+      <td>raw_hard_leakage_columns_present</td>
+      <td>4.000000</td>
+      <td><span class="badge warn">WARN</span></td>
+      <td>away_assists,away_goals,home_assists,home_goals</td>
+    </tr>
+    <tr>
       <td>train_test_game_id_overlap</td>
       <td>0.000000</td>
       <td><span class="badge ok">PASS</span></td>
@@ -984,19 +1170,19 @@
     </tr>
     <tr>
       <td>time_split_logreg_holdout</td>
-      <td>0.686635</td>
+      <td>0.687483</td>
       <td><span class="badge info">INFO</span></td>
-      <td>AUC=0.5594</td>
+      <td>AUC=0.5603</td>
     </tr>
     <tr>
       <td>permuted_label_sanity</td>
-      <td>0.748071</td>
+      <td>0.747586</td>
       <td><span class="badge ok">PASS</span></td>
-      <td>AUC=0.4568 (should be near random)</td>
+      <td>AUC=0.4591 (should be near random)</td>
     </tr>
     <tr>
       <td>random_split_vs_time_split_ll_gap</td>
-      <td>0.008295</td>
+      <td>0.009180</td>
       <td><span class="badge info">INFO</span></td>
       <td>Positive means random split is easier than temporal split</td>
     </tr>
@@ -1008,7 +1194,7 @@
     </tr>
     <tr>
       <td>selected_blend_overfit_gap</td>
-      <td>-0.010874</td>
+      <td>-0.012528</td>
       <td><span class="badge ok">OK</span></td>
       <td>holdout_ll - oof_ll for selected blend</td>
     </tr>

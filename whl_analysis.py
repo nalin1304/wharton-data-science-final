@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
 """
-WHL 2026 — v9.4: Leakage-Free Competition Pipeline
+Main WHL Phase 1 pipeline.
 
-Key updates:
-- Leakage-free model evaluation (pregame features only)
-- Time-aware validation + overfit diagnostics
-- Log-loss-first model selection with calibration/stability tie-breakers
-- Wharton-aligned outputs, including all-pairs matchup probabilities
-- Stabilized model pool with stronger regularization (v9.1)
-- Train-CV Elo parameter tuning (v9.2)
-- WHR-like whole-history ratings + weighted model-consensus layer (v9.3)
-- Formal leakage sanity report + robustness simulation layer (v9.4)
+This script loads the season data, builds pregame features, evaluates candidate
+models with time-aware validation, and exports rankings/predictions/artifacts.
 """
 
 import warnings
@@ -28,6 +21,7 @@ from sklearn.base import clone
 from sklearn.cluster import KMeans
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression, RidgeClassifier, SGDClassifier
 from sklearn.ensemble import (
     RandomForestClassifier,
@@ -81,6 +75,34 @@ ROBUSTNESS_BASE_SIGMA = 0.10
 ROBUSTNESS_TEAM_SIGMA_W = 0.25
 ROBUSTNESS_SPREAD_SIGMA_W = 0.15
 
+# Shared pregame feature set used by both the main and Elo pipelines.
+# Keeping this centralized avoids drift between scripts.
+MODEL_FEATURES = [
+    "xG_diff",
+    "ev_pct",
+    "xGF60",
+    "xGA60",
+    "wp",
+    "pyth",
+    "disp",
+    "pp60",
+    "pk60",
+    "pdo",
+    "close_wp",
+    "corsi60",
+    "shelter",
+    "elo",
+    "roll_xGF",
+    "roll_xGA",
+    "roll_win",
+    "sos",
+    "form_5",
+    "rest",
+    "elo_form_interaction",
+    "xg_rest_interaction",
+    "special_teams_net",
+]
+
 FALLBACK_MATCHUPS = [
     ("brazil", "kazakhstan"),
     ("netherlands", "mongolia"),
@@ -111,8 +133,13 @@ def model_probs(model, x):
     if hasattr(model, "predict_proba"):
         p = model.predict_proba(x)[:, 1]
     elif hasattr(model, "decision_function"):
-        d = model.decision_function(x)
-        p = (d - d.min()) / (d.max() - d.min() + 1e-12)
+        # Convert margins to a stable sigmoid score without batch-wise min/max scaling.
+        # Batch normalization can collapse singleton predictions to ~0.0 and distort inference.
+        d = np.asarray(model.decision_function(x), dtype=float)
+        if d.ndim > 1:
+            d = d[:, 0]
+        d = np.clip(d, -35.0, 35.0)
+        p = 1.0 / (1.0 + np.exp(-d))
     else:
         p = model.predict(x).astype(float)
     return np.clip(p, 1e-7, 1 - 1e-7)
@@ -587,6 +614,10 @@ def add_pregame_features(panel):
     panel["shelter"] = panel["shelter_prev"]
     panel["elo"] = panel["elo_pre"]
     panel["rest"] = panel["rest_proxy"]
+    # Keep interaction expansion deliberately small to reduce overfit risk.
+    panel["elo_form_interaction"] = (panel["elo"] - 1500.0) * (panel["form_5"] - 0.5)
+    panel["xg_rest_interaction"] = (panel["roll_xGF"] - panel["roll_xGA"]) * panel["rest"]
+    panel["special_teams_net"] = panel["pp60"] - panel["pk60"]
     return panel
 
 
@@ -810,6 +841,36 @@ def select_best_model(results):
     return best_name, best
 
 
+def refit_models_for_inference(train_df, diff_cols, results):
+    """
+    Refit models on all leakage-safe training games after model selection/evaluation.
+    This preserves honest holdout metrics while maximizing data usage for tournament inference.
+    """
+    x = np.nan_to_num(train_df[diff_cols].values, nan=0.0, posinf=0.0, neginf=0.0)
+    y = train_df["home_win"].values.astype(int)
+
+    full_scaler = StandardScaler()
+    x_scaled = full_scaler.fit_transform(x)
+
+    refreshed = {}
+    for name, res in results.items():
+        new_res = dict(res)
+        mdl = res.get("model")
+        if mdl is None:
+            refreshed[name] = new_res
+            continue
+
+        m = clone(mdl)
+        if res.get("scaled", False):
+            m.fit(x_scaled, y)
+        else:
+            m.fit(x, y)
+        new_res["model"] = m
+        refreshed[name] = new_res
+
+    return refreshed, full_scaler
+
+
 def build_final_team_features(panel, final_elos, gt, goalie_map, pp_stats, unit_stats, tev):
     rows = []
     tev_map = tev.set_index("Team")["Even_Str_xG%"].to_dict() if "Team" in tev.columns and "Even_Str_xG%" in tev.columns else {}
@@ -854,6 +915,11 @@ def build_final_team_features(panel, final_elos, gt, goalie_map, pp_stats, unit_
         roll_win = t["win"].tail(20).mean() if gp else 0.0
         form_5 = t["win"].tail(5).mean() if gp else 0.0
         sos = t["opp_elo_pre"].tail(20).mean() if gp else 1500.0
+        elo_rating = final_elos.get(team, 1500.0)
+        rest = 1.0
+        elo_form_interaction = (elo_rating - 1500.0) * (form_5 - 0.5)
+        xg_rest_interaction = (roll_xGF - roll_xGA) * rest
+        special_teams_net = pp60 - pk60
 
         gid = goalie_map.get(team, "")
         gsax60 = gt.loc[gt["gid"] == gid, "GSAx60"].iloc[0] if gid in gt["gid"].values else 0.0
@@ -881,7 +947,7 @@ def build_final_team_features(panel, final_elos, gt, goalie_map, pp_stats, unit_
                 "close_wp": close_wp,
                 "corsi60": corsi60,
                 "shelter": t["shelter"].mean(),
-                "elo": final_elos.get(team, 1500.0),
+                "elo": elo_rating,
                 "xG_diff": xGF - xGA,
                 "SF": SF,
                 "SA": SA,
@@ -891,7 +957,10 @@ def build_final_team_features(panel, final_elos, gt, goalie_map, pp_stats, unit_
                 "roll_win": roll_win,
                 "sos": sos,
                 "form_5": form_5,
-                "rest": 1.0,  # neutral default for unseen tournament games
+                "rest": rest,  # neutral default for unseen tournament games
+                "elo_form_interaction": elo_form_interaction,
+                "xg_rest_interaction": xg_rest_interaction,
+                "special_teams_net": special_teams_net,
                 "pp_xg_shift": pps["pp_xg_shift"],
                 "pk_xga_shift": pps["pk_xga_shift"],
                 "best_unit_xg60": uts["best_unit_xg60"],
@@ -1293,7 +1362,7 @@ def attach_robustness_layer(tpred, final_df, n_sims=ROBUSTNESS_N_SIMS, seed=RAND
     return tpred
 
 
-def run_leakage_and_overfit_checks(train_df, diff_cols, split):
+def run_leakage_and_overfit_checks(train_df, diff_cols, split, raw_df=None):
     x = np.nan_to_num(train_df[diff_cols].values, nan=0.0, posinf=0.0, neginf=0.0)
     y = train_df["home_win"].values.astype(int)
 
@@ -1301,6 +1370,112 @@ def run_leakage_and_overfit_checks(train_df, diff_cols, split):
     ytr, yte = y[:split], y[split:]
 
     rows = []
+    if raw_df is not None and len(raw_df) > 0:
+        raw_n = int(len(raw_df))
+        raw_cols = int(raw_df.shape[1])
+        raw_missing = int(raw_df.isna().sum().sum())
+        raw_dups = int(raw_df.duplicated().sum())
+        rows.extend(
+            [
+                {
+                    "Check": "raw_dataset_rows",
+                    "Value": raw_n,
+                    "Status": "INFO",
+                    "Details": "Season raw table row count",
+                },
+                {
+                    "Check": "raw_dataset_columns",
+                    "Value": raw_cols,
+                    "Status": "INFO",
+                    "Details": "Season raw table column count",
+                },
+                {
+                    "Check": "raw_missing_values",
+                    "Value": raw_missing,
+                    "Status": "PASS" if raw_missing == 0 else "WARN",
+                    "Details": "Total missing cells in raw table",
+                },
+                {
+                    "Check": "raw_duplicate_rows",
+                    "Value": raw_dups,
+                    "Status": "PASS" if raw_dups == 0 else "WARN",
+                    "Details": "Exact duplicate rows in raw table",
+                },
+            ]
+        )
+
+        if "game_id" in raw_df.columns:
+            uniq_games = int(raw_df["game_id"].nunique(dropna=True))
+            repeated_rows = max(0, raw_n - uniq_games)
+            rows.append(
+                {
+                    "Check": "raw_repeated_game_rows",
+                    "Value": repeated_rows,
+                    "Status": "INFO",
+                    "Details": f"rows={raw_n}; unique_game_id={uniq_games}",
+                }
+            )
+
+            idx = np.arange(raw_n)
+            rng = np.random.default_rng(RANDOM_STATE)
+            rng.shuffle(idx)
+            cut = min(max(1, int(raw_n * 0.76)), raw_n - 1)
+            tr_idx = idx[:cut]
+            te_idx = idx[cut:]
+            tr_games = set(raw_df.iloc[tr_idx]["game_id"].astype(str).values)
+            te_games = set(raw_df.iloc[te_idx]["game_id"].astype(str).values)
+            overlap_games = int(len(tr_games & te_games))
+            te_overlap_ratio = overlap_games / max(1, len(te_games))
+            rows.append(
+                {
+                    "Check": "raw_random_row_split_game_id_overlap",
+                    "Value": overlap_games,
+                    "Status": "FAIL" if overlap_games > 0 else "PASS",
+                    "Details": f"test_overlap_ratio={te_overlap_ratio:.4f}",
+                }
+            )
+
+        numeric = raw_df.select_dtypes(include=[np.number])
+        for target in ["home_goals", "away_goals"]:
+            if target not in numeric.columns:
+                continue
+            corr = (
+                numeric.corr(numeric_only=True)[target]
+                .drop(labels=[target], errors="ignore")
+                .abs()
+                .sort_values(ascending=False)
+            )
+            top_corr = corr.head(6)
+            for rank, (feat, val) in enumerate(top_corr.items(), start=1):
+                rows.append(
+                    {
+                        "Check": f"raw_top_corr_{target}_{rank}",
+                        "Value": round(float(val), 6),
+                        "Status": "WARN" if float(val) >= 0.90 else "INFO",
+                        "Details": f"Feature={feat}",
+                    }
+                )
+
+            high_corr = corr[corr >= 0.90]
+            rows.append(
+                {
+                    "Check": f"raw_high_corr_ge_0p90_{target}",
+                    "Value": int(len(high_corr)),
+                    "Status": "WARN" if len(high_corr) > 0 else "PASS",
+                    "Details": ",".join(high_corr.index.tolist()[:10]) if len(high_corr) > 0 else "none",
+                }
+            )
+
+        hard_leak_cols = [c for c in raw_df.columns if ("assists" in c.lower()) or (c.lower() in {"home_goals", "away_goals"})]
+        rows.append(
+            {
+                "Check": "raw_hard_leakage_columns_present",
+                "Value": int(len(hard_leak_cols)),
+                "Status": "WARN" if len(hard_leak_cols) > 0 else "PASS",
+                "Details": ",".join(sorted(hard_leak_cols)) if hard_leak_cols else "none",
+            }
+        )
+
     tr_ids = set(train_df["game_id"].iloc[:split].values)
     te_ids = set(train_df["game_id"].iloc[split:].values)
     overlap = len(tr_ids & te_ids)
@@ -1398,7 +1573,150 @@ def run_leakage_and_overfit_checks(train_df, diff_cols, split):
     return pd.DataFrame(rows)
 
 
-def build_calibration_table(probs, outcomes, bins=10, min_bin=20):
+def _expected_calibration_error(probs, outcomes, bins=10):
+    probs = np.clip(np.asarray(probs, dtype=float), 1e-7, 1 - 1e-7)
+    outcomes = np.asarray(outcomes, dtype=float)
+    if len(probs) == 0:
+        return 0.0
+    edges = np.linspace(0, 1, bins + 1)
+    ece = 0.0
+    for i in range(bins):
+        lo, hi = edges[i], edges[i + 1]
+        if i == bins - 1:
+            mask = (probs >= lo) & (probs <= hi)
+        else:
+            mask = (probs >= lo) & (probs < hi)
+        n = int(mask.sum())
+        if n == 0:
+            continue
+        p_avg = float(probs[mask].mean())
+        y_avg = float(outcomes[mask].mean())
+        ece += (n / len(probs)) * abs(p_avg - y_avg)
+    return float(ece)
+
+
+def _identity_calibrator(probs):
+    return np.clip(np.asarray(probs, dtype=float), 1e-7, 1 - 1e-7)
+
+
+def _fit_platt_calibrator(p_cal, y_cal):
+    if len(np.unique(y_cal)) < 2:
+        return None
+    x_cal = np.log(np.clip(p_cal, 1e-7, 1 - 1e-7) / np.clip(1 - p_cal, 1e-7, 1 - 1e-7)).reshape(-1, 1)
+    mdl = LogisticRegression(max_iter=2000, C=0.8, random_state=RANDOM_STATE)
+    mdl.fit(x_cal, y_cal)
+
+    def _calibrate(probs):
+        p = np.clip(np.asarray(probs, dtype=float), 1e-7, 1 - 1e-7)
+        x = np.log(p / np.clip(1 - p, 1e-7, 1 - 1e-7)).reshape(-1, 1)
+        return np.clip(mdl.predict_proba(x)[:, 1], 1e-7, 1 - 1e-7)
+
+    return _calibrate
+
+
+def _fit_isotonic_calibrator(p_cal, y_cal):
+    if len(np.unique(y_cal)) < 2 or len(np.unique(np.round(p_cal, 8))) < 2:
+        return None
+    iso = IsotonicRegression(out_of_bounds="clip")
+    iso.fit(np.asarray(p_cal, dtype=float), np.asarray(y_cal, dtype=float))
+
+    def _calibrate(probs):
+        p = np.clip(np.asarray(probs, dtype=float), 1e-7, 1 - 1e-7)
+        return np.clip(iso.predict(p), 1e-7, 1 - 1e-7)
+
+    return _calibrate
+
+
+def select_calibration_method(probs, outcomes, min_rows=80, cal_ratio=0.60):
+    probs = np.clip(np.asarray(probs, dtype=float), 1e-7, 1 - 1e-7)
+    outcomes = np.asarray(outcomes, dtype=int)
+    n = len(probs)
+
+    if n == 0:
+        rep = pd.DataFrame(
+            [{"Method": "raw", "Fit_Rows": 0, "Eval_Rows": 0, "Eval_Log_Loss": np.nan, "Eval_Brier": np.nan, "Eval_ECE": np.nan, "Eligible": False, "Selected": True, "Note": "No rows; fallback to raw."}]
+        )
+        return "raw", _identity_calibrator, rep
+
+    if n < min_rows:
+        p_raw = _identity_calibrator(probs)
+        rep = pd.DataFrame(
+            [{"Method": "raw", "Fit_Rows": n, "Eval_Rows": 0, "Eval_Log_Loss": float(log_loss(outcomes, p_raw)), "Eval_Brier": float(brier_score_loss(outcomes, p_raw)), "Eval_ECE": _expected_calibration_error(p_raw, outcomes), "Eligible": False, "Selected": True, "Note": f"Rows<{min_rows}; fallback to raw."}]
+        )
+        return "raw", _identity_calibrator, rep
+
+    cut = int(n * cal_ratio)
+    cut = max(40, cut)
+    cut = min(cut, n - 20)
+    if cut <= 0 or cut >= n:
+        p_raw = _identity_calibrator(probs)
+        rep = pd.DataFrame(
+            [{"Method": "raw", "Fit_Rows": n, "Eval_Rows": 0, "Eval_Log_Loss": float(log_loss(outcomes, p_raw)), "Eval_Brier": float(brier_score_loss(outcomes, p_raw)), "Eval_ECE": _expected_calibration_error(p_raw, outcomes), "Eligible": False, "Selected": True, "Note": "Invalid split; fallback to raw."}]
+        )
+        return "raw", _identity_calibrator, rep
+
+    p_fit, y_fit = probs[:cut], outcomes[:cut]
+    p_eval, y_eval = probs[cut:], outcomes[cut:]
+
+    if len(np.unique(y_fit)) < 2 or len(np.unique(y_eval)) < 2:
+        p_raw = _identity_calibrator(probs)
+        rep = pd.DataFrame(
+            [{"Method": "raw", "Fit_Rows": len(y_fit), "Eval_Rows": len(y_eval), "Eval_Log_Loss": float(log_loss(outcomes, p_raw)), "Eval_Brier": float(brier_score_loss(outcomes, p_raw)), "Eval_ECE": _expected_calibration_error(p_raw, outcomes), "Eligible": False, "Selected": True, "Note": "Calibration/eval split lacks both classes; fallback to raw."}]
+        )
+        return "raw", _identity_calibrator, rep
+
+    candidates = {
+        "raw": _identity_calibrator,
+        "platt": _fit_platt_calibrator(p_fit, y_fit),
+        "isotonic": _fit_isotonic_calibrator(p_fit, y_fit),
+    }
+
+    rows = []
+    for name, fn in candidates.items():
+        if fn is None:
+            rows.append(
+                {
+                    "Method": name,
+                    "Fit_Rows": len(y_fit),
+                    "Eval_Rows": len(y_eval),
+                    "Eval_Log_Loss": np.nan,
+                    "Eval_Brier": np.nan,
+                    "Eval_ECE": np.nan,
+                    "Eligible": False,
+                    "Selected": False,
+                    "Note": "Insufficient signal for this calibrator.",
+                }
+            )
+            continue
+
+        p_adj = np.clip(fn(p_eval), 1e-7, 1 - 1e-7)
+        rows.append(
+            {
+                "Method": name,
+                "Fit_Rows": len(y_fit),
+                "Eval_Rows": len(y_eval),
+                "Eval_Log_Loss": float(log_loss(y_eval, p_adj)),
+                "Eval_Brier": float(brier_score_loss(y_eval, p_adj)),
+                "Eval_ECE": _expected_calibration_error(p_adj, y_eval),
+                "Eligible": True,
+                "Selected": False,
+                "Note": "",
+            }
+        )
+
+    rep = pd.DataFrame(rows)
+    eligible = rep[rep["Eligible"] == True].copy()
+    if len(eligible) == 0:
+        rep.loc[rep["Method"] == "raw", "Selected"] = True
+        return "raw", _identity_calibrator, rep
+
+    eligible = eligible.sort_values(["Eval_Log_Loss", "Eval_Brier", "Eval_ECE", "Method"]).reset_index(drop=True)
+    best_method = str(eligible.iloc[0]["Method"])
+    rep.loc[rep["Method"] == best_method, "Selected"] = True
+    return best_method, candidates[best_method], rep
+
+
+def build_calibration_table(probs, outcomes, bins=10, min_bin=20, method_label="raw"):
     probs = np.clip(np.asarray(probs), 1e-7, 1 - 1e-7)
     outcomes = np.asarray(outcomes)
     edges = np.linspace(0, 1, bins + 1)
@@ -1425,6 +1743,7 @@ def build_calibration_table(probs, outcomes, bins=10, min_bin=20):
                 "se": se,
                 "ci_low_95": max(0.0, y_avg - 1.96 * se),
                 "ci_high_95": min(1.0, y_avg + 1.96 * se),
+                "method": method_label,
             }
         )
 
@@ -1445,25 +1764,38 @@ def build_calibration_table(probs, outcomes, bins=10, min_bin=20):
                     "se": se,
                     "ci_low_95": max(0.0, y_avg - 1.96 * se),
                     "ci_high_95": min(1.0, y_avg + 1.96 * se),
+                    "method": method_label,
                 }
             ]
         )
     return tab
 
 
-def attach_uncertainty_to_matchups(tpred, calibration_table):
+def build_calibration_artifacts(probs, outcomes, bins=10, min_bin=20):
+    method, cal_fn, selection_table = select_calibration_method(probs, outcomes)
+    calibrated = np.clip(cal_fn(np.asarray(probs, dtype=float)), 1e-7, 1 - 1e-7)
+    cal_table = build_calibration_table(calibrated, outcomes, bins=bins, min_bin=min_bin, method_label=method)
+    return cal_table, selection_table, cal_fn, method
+
+
+def attach_uncertainty_to_matchups(tpred, calibration_table, calibrate_fn=None):
     tpred = tpred.copy()
+    raw_probs = np.clip(tpred["Win_Prob"].values.astype(float), 1e-7, 1 - 1e-7)
+    if calibrate_fn is None:
+        calibrated_probs = raw_probs
+    else:
+        calibrated_probs = np.clip(np.asarray(calibrate_fn(raw_probs), dtype=float), 1e-7, 1 - 1e-7)
+
     if len(calibration_table) == 0:
-        tpred["Calibrated_Win_Prob"] = tpred["Win_Prob"]
-        tpred["CI_Low_95"] = np.clip(tpred["Win_Prob"] - 0.08, 0, 1)
-        tpred["CI_High_95"] = np.clip(tpred["Win_Prob"] + 0.08, 0, 1)
-        tpred["Upset_Risk"] = 1 - np.abs(2 * tpred["Win_Prob"] - 1)
+        tpred["Calibrated_Win_Prob"] = np.round(calibrated_probs, 4)
+        tpred["CI_Low_95"] = np.round(np.clip(calibrated_probs - 0.08, 0, 1), 4)
+        tpred["CI_High_95"] = np.round(np.clip(calibrated_probs + 0.08, 0, 1), 4)
+        tpred["Upset_Risk"] = np.round(1 - np.abs(2 * calibrated_probs - 1), 4)
         return tpred
 
     mids = (calibration_table["bin_low"] + calibration_table["bin_high"]) / 2
     rows = []
-    for _, r in tpred.iterrows():
-        p = float(r["Win_Prob"])
+    for p in calibrated_probs:
         idx = (mids - p).abs().idxmin()
         row = calibration_table.loc[idx]
         p_cal = 0.6 * p + 0.4 * float(row["emp_win_rate"])
@@ -1882,6 +2214,7 @@ def build_completeness_report(out_dir):
         "Team_Archetypes.csv",
         "Team_Archetype_Centers.csv",
         "Tournament_Uncertainty_Report.csv",
+        "Tournament_Calibration_Selection.csv",
         "WHR_Ratings.csv",
         "Tournament_Model_Consensus.csv",
         "Consensus_Model_Weights.csv",
@@ -1970,11 +2303,7 @@ def main():
     panel = build_team_game_panel(gs, shift_game, elo_df, rest_game)
     panel = add_pregame_features(panel)
 
-    model_features = [
-        "xG_diff", "ev_pct", "xGF60", "xGA60", "wp", "pyth", "disp", "pp60", "pk60",
-        "pdo", "close_wp", "corsi60", "shelter", "elo", "roll_xGF", "roll_xGA",
-        "roll_win", "sos", "form_5", "rest",
-    ]
+    model_features = MODEL_FEATURES
 
     print("\n[5/12] Training matrix...")
     train_df, diff_cols = build_training_matrix(panel, model_features, MODEL_MIN_HISTORY_GAMES)
@@ -2012,10 +2341,10 @@ def main():
     print(f"  Rebuilt training rows with tuned Elo: {len(train_df):,}")
 
     print("\n[6/12] Model training and evaluation...")
-    results, scaler, yte, split = evaluate_models(train_df, diff_cols)
+    results, _scaler_eval, yte, split = evaluate_models(train_df, diff_cols)
     overfit_count = sum(1 for r in results.values() if r["status"] == "OVR")
     print(f"\n  Overfitting models: {overfit_count}/{len(results)}")
-    sanity_df = run_leakage_and_overfit_checks(train_df, diff_cols, split)
+    sanity_df = run_leakage_and_overfit_checks(train_df, diff_cols, split, raw_df=raw)
     sanity_df.to_csv(os.path.join(OUT, "Leakage_Sanity_Report.csv"), index=False)
     sanity_pass = (sanity_df["Status"] == "PASS").sum()
     print(f"  Leakage/overfit sanity checks saved: Leakage_Sanity_Report.csv ({sanity_pass} PASS)")
@@ -2027,6 +2356,9 @@ def main():
         f"  LL={best['ll']:.4f} Acc={best['acc']:.4f} AUC={best['auc']:.4f} "
         f"Brier={best['brier']:.4f} Gap={best['gap']:.4f} Status={best['status']}"
     )
+    inference_results, scaler = refit_models_for_inference(train_df, diff_cols, results)
+    best = inference_results[best_name]
+    print("  Refit models on full leakage-safe season data for tournament inference.")
 
     print("\n[8/12] End-of-season team features...")
     final_df = build_final_team_features(panel, final_elos, gt, goalie_map, pp_stats, unit_stats, tev)
@@ -2057,14 +2389,16 @@ def main():
     print(f"  WHR-like home edge: {whr_home_adv_pts:.1f} Elo pts")
 
     tpred, model_prob_cols = attach_tournament_model_probs(
-        tpred, results, final_df, model_features, scaler, final_elos, elo_ha=elo_best["ha"]
+        tpred, inference_results, final_df, model_features, scaler, final_elos, elo_ha=elo_best["ha"]
     )
-    tpred, consensus_weights = add_model_consensus(tpred, results, model_prob_cols)
+    tpred, consensus_weights = add_model_consensus(tpred, inference_results, model_prob_cols)
     consensus_weights.to_csv(os.path.join(OUT, "Consensus_Model_Weights.csv"), index=False)
 
-    cal_tbl = build_calibration_table(best["te_probs"], yte, bins=10, min_bin=20)
+    cal_tbl, cal_selection, cal_fn, cal_method = build_calibration_artifacts(best["te_probs"], yte, bins=10, min_bin=20)
     cal_tbl.to_csv(os.path.join(OUT, "Tournament_Uncertainty_Report.csv"), index=False)
-    tpred = attach_uncertainty_to_matchups(tpred, cal_tbl)
+    cal_selection.to_csv(os.path.join(OUT, "Tournament_Calibration_Selection.csv"), index=False)
+    tpred = attach_uncertainty_to_matchups(tpred, cal_tbl, calibrate_fn=cal_fn)
+    tpred["Calibration_Method"] = cal_method
     tpred = attach_robustness_layer(tpred, final_df, n_sims=ROBUSTNESS_N_SIMS, seed=RANDOM_STATE)
     tpred[
         [
@@ -2132,7 +2466,7 @@ def main():
     print("\n[10/12] All-pairs matrix (Wharton unknown-matchup alignment)...")
     ap = predict_all_pairs(teams, best, final_df, model_features, scaler, final_elos, elo_ha=elo_best["ha"])
     print(f"  Saved All_Pair_Matchup_Probabilities.csv ({len(ap)} rows)")
-    print("  Saved Team_Archetypes.csv + Tournament_Uncertainty_Report.csv")
+    print("  Saved Team_Archetypes.csv + Tournament_Uncertainty_Report.csv + Tournament_Calibration_Selection.csv")
 
     # Recover historical CSV placeholders so they become usable tables.
     rebuild_reference_csvs(ms, gs, gt, power_df, line_df, final_df)
